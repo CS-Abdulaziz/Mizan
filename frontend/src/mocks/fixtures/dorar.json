@@ -1,0 +1,15 @@
+{
+  "text_arabic": "اطلُبُوا العِلْمَ ولو بالصِّينِ",
+  "source": "dorar",
+  "url": "https://dorar.net/h/Yx6dE0Zf",
+  "gradings": [
+    {
+      "mohaddith": "الألباني",
+      "book": "السلسلة الضعيفة",
+      "page": "416",
+      "grade_text": "باطل",
+      "grade_class": "very_weak"
+    }
+  ],
+  "provenance": "Source page retrieved for frontend fixture authoring, 2026-10-05. Demo verdict is a fixed API fixture, not a frontend authenticity decision."
+}
