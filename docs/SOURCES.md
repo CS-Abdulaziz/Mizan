@@ -32,3 +32,6 @@ Other keys returned for en: `english_saheeh`, `english_hilali_khan`. Only one ke
 | `quran_translations` (`urdu_junagarhi`, ur) | 6,236 | 2026-10-05 | same |
 | `hadiths` (HadeethEnc, priority categories 3, 5, 121) | 2,646 | 2026-10-05 | creed (3), virtues & manners (5), fiqh of worship (121); 0 fetch failures |
 | `hadith_translations` ar / en / ur | 2,646 / 1,765 / 1,707 | 2026-10-05 | 881 hadiths are Arabic-only at the source (`translations: ["ar"]`); en/ur rows only where the source lists that translation. `--all` ingests the remaining root categories |
+| `hadiths` (HadeethEnc, all root categories, `--all`) | 3,574 | 2026-10-06 | Supabase; ar 3,574 / en 2,328 / ur 2,220 |
+| `quran_verses`, `quran_translations` (Supabase) | 6,236 / 2 x 6,236 | 2026-10-06 | migrations 001-003 applied |
+| embeddings | 700 hadith rows | 2026-10-06 | Gemini free tier ~1,000 texts/day (D-19); `embed_corpus.py` daily |
