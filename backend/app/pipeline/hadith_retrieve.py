@@ -265,9 +265,23 @@ async def path_a_dorar(ar_queries: list[str], client: DorarClient | None = None)
 # --------------------------------------------------------------------------- merge
 
 
+SPAN_QUERY_WORDS = 12
+
+
+def span_query(span: str) -> str | None:
+    """Deterministic Dorar query for an Arabic quote: its first words, normalized. Being deterministic, it hits
+    dorar_cache entries warmed from any machine (Dorar may block the server's datacenter IP)."""
+    words = normalize_ar(span).split()
+    return " ".join(words[:SPAN_QUERY_WORDS]) if len(words) >= 2 else None
+
+
 async def retrieve(span: str, lang: str, ar_queries: list[str], *, dorar: DorarClient | None = None,
                    use_vectors: bool = True) -> RetrievalResult:
-    a_task = asyncio.create_task(path_a_dorar(ar_queries, dorar)) if ar_queries else None
+    from app.pipeline.extract import is_arabic
+
+    sq = span_query(span) if is_arabic(span) else None
+    queries = ([sq] if sq else []) + [q for q in ar_queries if normalize_ar(q) != sq]
+    a_task = asyncio.create_task(path_a_dorar(queries, dorar)) if queries else None
     b_task = asyncio.create_task(path_b_vector(span, lang)) if use_vectors else None
     c = path_c_local(ar_queries, span, lang)
     status, calls, a = "ok", 0, []
