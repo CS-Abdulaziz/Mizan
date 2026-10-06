@@ -24,7 +24,15 @@ Exact steps for things only the human can do. Work continues on independent task
    reviewer: fill `approve (Y/N)`, `reviewer`, `note`. Optionally add widespread unestablished hadiths to
    `bench/seed_fabricated.csv` (Dorar links only). Then run `python bench/build_items.py --apply-review` and commit.
    Results are reported with reviewed vs unreviewed counts either way.
-6. *(more items are added below as tasks reach a HUMAN step)*
+6. **Telegram bot (B24), after the Render deploy.** (a) In Telegram, message @BotFather: `/newbot`, pick a name and
+   a username, copy the token. (b) Generate a webhook secret:
+   `python -c "import secrets; print(secrets.token_urlsafe(32))"`. (c) In Render > Environment set
+   `TELEGRAM_BOT_TOKEN` and `TELEGRAM_WEBHOOK_SECRET` (and `PUBLIC_WEB_URL` = the Pages URL for the Details button),
+   save (it redeploys). (d) Register the webhook (replace the three placeholders):
+   `curl -s "https://api.telegram.org/bot<TOKEN>/setWebhook" -d "url=https://<service>.onrender.com/telegram/webhook" -d "secret_token=<SECRET>" -d 'allowed_updates=["message","callback_query"]'`
+   -> `{"ok":true,...}`. (e) Manual test from a phone: forward a captioned image containing a hadith, check the
+   ⏳ message is edited with the verdict, try the three buttons. Tell me the result so I can tick B24.
+7. *(more items are added below as tasks reach a HUMAN step)*
 
 ## Resume here
 
@@ -284,6 +292,8 @@ Build: §10 in full (text or caption, HTML escaping, edit-in-place, buttons, 4,0
 `/start` in ar/en/ur, 10 msgs/min per user with hashed user ID, webhook secret).
 AC: unit tests for escaping and splitting; manual test from a phone forwarding a captioned image.
 HUMAN: create the bot with BotFather, set `TELEGRAM_BOT_TOKEN`, run `setWebhook` (provide the exact command).
+STATUS 2026-10-06: code + unit tests done (escaping, card-boundary split, secret check, hashed user ids).
+Not ticked until the manual phone test (Waiting on Azoz 6).
 
 ---
 

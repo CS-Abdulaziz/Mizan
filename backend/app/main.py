@@ -10,7 +10,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import check, feedback, health, reply, sources
+from app.api import check, feedback, health, reply, sources, telegram
 from app.core.config import get_settings
 from app.core.logging import get_logger, setup_logging
 from app.db import queries, session
@@ -46,11 +46,16 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     await hadith_retrieve.load_hadeeth_index()
     cleanup = asyncio.create_task(cleanup_expired_results_forever())
     try:
+        await telegram.start_bot()
+    except Exception as e:  # noqa: BLE001 - the API must start even if the bot cannot
+        log.warning("telegram_bot_start_failed", extra={"error": type(e).__name__})
+    try:
         yield
     finally:
         cleanup.cancel()
         with contextlib.suppress(asyncio.CancelledError):
             await cleanup
+        await telegram.stop_bot()
         await hadith_retrieve.close_dorar()
         await session.close_pool()
         log.info("shutdown")
@@ -70,6 +75,7 @@ def create_app() -> FastAPI:
     app.include_router(sources.router)
     app.include_router(reply.router)
     app.include_router(feedback.router)
+    app.include_router(telegram.router)
     return app
 
 
