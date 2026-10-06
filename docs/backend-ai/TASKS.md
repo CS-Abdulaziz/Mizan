@@ -20,7 +20,11 @@ Exact steps for things only the human can do. Work continues on independent task
 4. **Pinger (B17).** On uptimerobot.com (free): Add New Monitor > HTTP(s) > URL
    `https://<service>.onrender.com/health` > interval 10 minutes. Keeps Render (free tier sleeps) and Supabase
    (pauses after ~1 week idle) awake through final judging 19-22 Oct.
-5. *(more items are added below as tasks reach a HUMAN step)*
+5. **Bench review (B18, D-22).** Give `bench/review_sheet.csv` (179 rows, UTF-8, opens in Excel) to the sharia
+   reviewer: fill `approve (Y/N)`, `reviewer`, `note`. Optionally add widespread unestablished hadiths to
+   `bench/seed_fabricated.csv` (Dorar links only). Then run `python bench/build_items.py --apply-review` and commit.
+   Results are reported with reviewed vs unreviewed counts either way.
+6. *(more items are added below as tasks reach a HUMAN step)*
 
 ## Resume here
 
@@ -221,7 +225,7 @@ connects the DB pool once, storage off the response path). Not ticked until depl
 
 ## Phase D — Evaluation (start B18 in parallel with Phase C)
 
-### [ ] B18 · Mizan-Bench builder (P0) — `NEEDS SH SIGN-OFF`
+### [x] B18 · Mizan-Bench builder (P0) — `NEEDS SH SIGN-OFF`
 Depends on: B02 (sources), B05–B09 for data
 Build: `bench/build_items.py` that seeds items **from source data only** (§11.1–11.2): authentic hadiths
 (HadeethEnc + Dorar), authentic hadiths that also have weak chains (Dorar results where a Sahihayn grading and

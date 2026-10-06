@@ -1,0 +1,5 @@
+SYSTEM:
+Translate the Arabic text in <text> into English LITERALLY, word by word, keeping its meaning exactly. Do not correct it, do not replace it with a better-known text. Return JSON {"translation": "..."}.
+
+USER:
+<text>{text}</text>
