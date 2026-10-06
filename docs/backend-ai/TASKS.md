@@ -1,36 +1,39 @@
 # Backend + AI tasks
 
-## Final checklist (B26, SPEC §18), 2026-10-06
+## Final checklist (B26, SPEC §18), updated 2026-10-06 before the 17:00 freeze
 
-| SPEC §18 item | Status | Evidence / what is left |
+Live backend: https://mizan-backend-d4t5.onrender.com (Render, deploys from the fork CS-Abdulaziz/Mizan `main`;
+every commit is pushed to both `origin` and `fork`).
+
+| SPEC §18 item | Status | Evidence / what is still on Azoz |
 |---|---|---|
-| Live link works from an external device; ar / en / ur examples right | **FAIL (pending deploy)** | Locally PASS: `python scripts/try_check.py --video` -> ar: altered 2:255 `misquoted` + fabricated hadith `not_established`; en: hadith `verified` (HadeethEnc); ur: 112:1 `verified`. Needs the Render deploy (below). |
-| All verdicts and statuses appear in real examples | PASS | `python scripts/verdict_examples.py > docs/VERDICT_EXAMPLES.md` (needs_review / evidence_request from live checks) |
-| No reference or grade absent from the sources | PASS | Texts, gradings, links copied from sources; ids validated in code; 5 automatic flags on test are check artifacts (EVALUATION.md) |
-| False-verified rate on the test split reported | PASS | 0.0% (0/39) for Mizan; 15.4% for Dorar-as-is |
-| Bench results + both baselines in EVALUATION.md with reviewed counts | **PARTIAL** | Mizan test 109/125, dorar_direct test complete, llm_baseline dev only (quota, D-25); 0/179 items reviewed |
-| Repo public, from-scratch instructions work, sources + licenses documented, no keys | **PARTIAL** | Docs done; full-history secret scan clean; making the repo public and a clean-machine test are human steps |
-| `/health` queries the DB; pinger; cache warmed | **PARTIAL** | `/health` runs `select 1` (PASS); pinger + warm cache after deploy |
-| Service up through 19-22 Oct, checked daily | PENDING | human, daily |
+| Live link works from an external device; ar / en / ur examples right | **PASS** | Live smoke: /health 200 (db true); ar altered verse `misquoted` + fabricated hadith `not_established`; en hadith `verified`; ur 112:1 `verified`; no_claims and evidence_request statuses correct; no `source_unavailable` (Dorar reachable from Render). Latency 4.6-29.7 s on the free tier. One transient 502 during a redeploy. |
+| All verdicts and statuses appear in real examples | **PASS** | `docs/VERDICT_EXAMPLES.md` (`python scripts/verdict_examples.py`) |
+| No reference or grade absent from the sources | **PENDING (Azoz)** | By construction texts / grades / links are copied from sources and ids validated in code; the automatic check flagged 5/104 Mizan outputs: confirm them by hand (list printed in the session) |
+| False-verified rate on the test split reported | **PASS** | Mizan 0.0% (0/39) vs LLM alone 30.4% vs Dorar as-is 15.4% |
+| Bench results + both baselines in EVALUATION.md, reviewed counts | **PARTIAL** | Full mizan + dorar_direct; llm_baseline 89/125 (quota); 1 run (no consistency); 0/179 reviewed (Azoz: sharia review) |
+| Repo public, run-from-scratch works, sources + licenses, no keys | **PARTIAL** | Docs done; secret scan of full history clean (grep; Azoz: run gitleaks, make the repo public, clean-machine test) |
+| `/health` queries the DB; pinger; cache warmed | **PARTIAL** | /health PASS; Azoz: UptimeRobot on /health every 10 min; warm cache before judging |
+| Service up through 19-22 Oct, checked daily | **PENDING (Azoz)** | daily check |
 
 ### Commands for what is left (run from the repo root)
 
 ```bash
 # 1. Deploy: render.com > New > Blueprint > OmarCsY/Mizan (reads render.yaml); paste DATABASE_URL, LLM_API_KEY,
 #    EMBEDDING_API_KEY, GROQ_API_KEY, ALLOWED_ORIGINS=<pages-url>,http://localhost:5173, PUBLIC_WEB_URL=<pages-url>
-curl -s https://<service>.onrender.com/health          # expect {"ok": true, "db": true}
-# 2. Pinger: uptimerobot.com > HTTP(s) monitor > https://<service>.onrender.com/health > every 10 min
+curl -s https://mizan-backend-d4t5.onrender.com/health   # expect {"ok": true, "db": true}
+# 2. Pinger: uptimerobot.com > HTTP(s) monitor > https://mizan-backend-d4t5.onrender.com/health > every 10 min
 # 3. Finish / refresh the test-split numbers, then the report
 python bench/run.py --system mizan --split test --runs 1 --rpm 5
 python bench/run.py --system llm_baseline --split test --runs 1 --rpm 8
 python bench/metrics.py --split test --out bench/results/report.md
 # 4. Before each judging session (fills dorar_cache; ~30 min at 6/min)
-python scripts/warm_cache.py --api https://<service>.onrender.com
+python scripts/warm_cache.py --api https://mizan-backend-d4t5.onrender.com
 # 5. Once a day until judging (free tier ~1,000 texts/day; resumes where it stopped)
 python scripts/embed_corpus.py
 # 6. Telegram (only if our own bot is enabled: ENABLE_TELEGRAM_BOT=true, D-28)
 python -c "import secrets; print(secrets.token_urlsafe(32))"   # -> TELEGRAM_WEBHOOK_SECRET on Render
-curl -s "https://api.telegram.org/bot<TOKEN>/setWebhook" -d "url=https://<service>.onrender.com/telegram/webhook" -d "secret_token=<SECRET>" -d 'allowed_updates=["message","callback_query"]'
+curl -s "https://api.telegram.org/bot<TOKEN>/setWebhook" -d "url=https://mizan-backend-d4t5.onrender.com/telegram/webhook" -d "secret_token=<SECRET>" -d 'allowed_updates=["message","callback_query"]'
 # 7. Sharia review applied
 python bench/build_items.py --apply-review
 # 8. Stronger secret scan before making the repo public
@@ -66,14 +69,14 @@ Exact steps for things only the human can do. Work continues on independent task
    `python -c "import secrets; print(secrets.token_urlsafe(32))"`. (c) In Render > Environment set
    `TELEGRAM_BOT_TOKEN` and `TELEGRAM_WEBHOOK_SECRET` (and `PUBLIC_WEB_URL` = the Pages URL for the Details button),
    save (it redeploys). (d) Register the webhook (replace the three placeholders):
-   `curl -s "https://api.telegram.org/bot<TOKEN>/setWebhook" -d "url=https://<service>.onrender.com/telegram/webhook" -d "secret_token=<SECRET>" -d 'allowed_updates=["message","callback_query"]'`
+   `curl -s "https://api.telegram.org/bot<TOKEN>/setWebhook" -d "url=https://mizan-backend-d4t5.onrender.com/telegram/webhook" -d "secret_token=<SECRET>" -d 'allowed_updates=["message","callback_query"]'`
    -> `{"ok":true,...}`. (e) Manual test from a phone: forward a captioned image containing a hadith, check the
    ⏳ message is edited with the verdict, try the three buttons. Tell me the result so I can tick B24.
 7. **Frontend switch to the real backend (tell the frontend teammate).** In the Cloudflare Pages build env:
    `VITE_USE_MOCK_API=false`, `VITE_MIZAN_API_URL=https://<service>.onrender.com`, `VITE_ENABLE_FEEDBACK=true`
    (the feedback endpoint is live), keep `VITE_API_TIMEOUT_MS=30000`. Their `/r/{check_id}` page works with
    `GET /api/v1/check/{id}` (24 h). Then add the Pages URL to Render's `ALLOWED_ORIGINS`.
-8. **Before each judging session:** `python scripts/warm_cache.py --api https://<service>.onrender.com` (fills
+8. **Before each judging session:** `python scripts/warm_cache.py --api https://mizan-backend-d4t5.onrender.com` (fills
    dorar_cache for every demo and bench item; ~30 min at 6/min) and `python scripts/embed_corpus.py` once a day.
 9. *(more items are added below as tasks reach a HUMAN step)*
 
