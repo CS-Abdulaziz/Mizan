@@ -34,7 +34,9 @@ export function SourceLink({ url, children = "عرض المصدر" }) {
   ) : null;
 }
 export function VerdictBadge({ claim }) {
-  const unavailable = claim.source_status === "source_unavailable";
+  // the outage replaces the verdict only when nothing was found; otherwise the verdict stands (from other sources)
+  const unavailable =
+    claim.source_status === "source_unavailable" && claim.verdict === "not_found";
   const [icon, label] = unavailable
     ? ["!", "تعذر الوصول للمصدر"]
     : VERDICTS[claim.verdict];
@@ -172,7 +174,9 @@ function Feedback({ resultId, claimIndex }) {
 }
 export function ClaimCard({ claim, resultId }) {
   const evidence = claim.evidence;
-  const unavailable = claim.source_status === "source_unavailable";
+  const outage = claim.source_status === "source_unavailable";
+  const unavailable = outage && claim.verdict === "not_found";
+  const partialOutage = outage && claim.verdict !== "not_found";
   return (
     <article className="claim" aria-labelledby={`claim-${claim.index}`}>
       <div className="claim-header">
@@ -189,6 +193,12 @@ export function ClaimCard({ claim, resultId }) {
         <p className="notice">
           تعذر الوصول إلى أحد المصادر حاليًا. حاول مرة أخرى؛ تعذّر الوصول لا
           يعني عدم وجود الاقتباس.
+        </p>
+      )}
+      {partialOutage && (
+        <p className="notice small">
+          لم يستجب أحد المصادر (الدرر السنية)، والحكم مبني على المصادر الأخرى
+          المتاحة.
         </p>
       )}
       {!unavailable && claim.verdict === "not_found" && (

@@ -240,14 +240,15 @@ async def path_a_dorar(ar_queries: list[str], client: DorarClient | None = None)
     client = client or get_dorar()
     results: list[DorarResult] = []
     seen: set[str] = set()
-    calls, failures = 0, 0
+    calls, failures, reasons = 0, 0, []
     queries = [q for q in ar_queries if normalize_ar(q)][:3]
     for q in queries:
         calls += 1
         try:
             found = await client.search(q)
-        except SourceUnavailable:
+        except SourceUnavailable as e:
             failures += 1
+            reasons.append(e.reason)
             continue
         qc = normalize_ar(q)
         for r in found:
@@ -257,7 +258,7 @@ async def path_a_dorar(ar_queries: list[str], client: DorarClient | None = None)
         if any(fuzz.token_set_ratio(qc, r.text_clean) >= T.DORAR_EARLY_STOP for r in found):
             break
     if queries and failures == calls:
-        raise SourceUnavailable("dorar", "all queries failed")
+        raise SourceUnavailable("dorar", ",".join(sorted(set(reasons))) or "all queries failed")
     return group_by_matn(results, [normalize_ar(q) for q in queries]), calls
 
 
@@ -273,9 +274,9 @@ async def retrieve(span: str, lang: str, ar_queries: list[str], *, dorar: DorarC
     if a_task is not None:
         try:
             a, calls = await a_task
-        except SourceUnavailable:
+        except SourceUnavailable as e:
             status = "source_unavailable"
-            log.warning("dorar_unavailable")
+            log.warning("dorar_unavailable", extra={"reason": e.reason})
     b, embed_tokens = await b_task if b_task is not None else ([], 0)
 
     merged: dict[str, HadithCandidate] = {}
