@@ -269,7 +269,7 @@ caching the reply in `check_results.reply`.
 AC: mocked test where the model adds a foreign URL → regenerated → still bad → `reply: null` with
 `reply_error`; live test (`@live`) on one en and one ur result.
 
-### [ ] B22 · Authentic alternative (P1)
+### [x] B22 · Authentic alternative (P1)
 Depends on: B13, B15
 Build: `pipeline/alternative.py` §8.5.
 AC: alternative only for `not_established`; below 0.75 similarity → none; labelled as a different hadith.

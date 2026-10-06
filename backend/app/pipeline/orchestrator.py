@@ -244,8 +244,14 @@ async def decide_hadith(i: int, c: ExtractedClaim, msg_lang: str, trace: ClaimTr
         diff = R.Diff(kind="attribution", details="the cited book is not among the sources of this hadith")
     if verdict in ("verified", "misquoted") and decide.has_weak_chains(grade_in):
         notes.append("takhrij_has_weak_chains")
+    alt = None
+    if verdict == "not_established":  # §8.5: only for not_established, labelled as a different hadith
+        from app.pipeline.alternative import find_alternative
+
+        exclude = {int(h.id[3:]) for h in matched if h.source == "hadeethenc"}
+        alt = await find_alternative(c.span, lang, exclude)
     return R.ClaimResult(**base, verdict=verdict, relation=res.relation, confidence=res.confidence, evidence=ev,
-                         diff=diff, notes=notes, source_status=ret.source_status)
+                         diff=diff, alternative=alt, notes=notes, source_status=ret.source_status)
 
 
 # --------------------------------------------------------------------------- per-claim routing (D-4)
