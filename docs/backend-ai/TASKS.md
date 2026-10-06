@@ -154,7 +154,7 @@ AC:
   map correctly; text containing "ignore previous instructions" does not change behaviour (mock returns schema-valid output; assert prompt wraps text in `<message>`).
 - One live test (marked `@pytest.mark.live`, skipped by default) on 3 real messages.
 
-### [ ] B11 · Verse matcher with alignment (P0) — AMENDMENT 4
+### [x] B11 · Verse matcher with alignment (P0) — AMENDMENT 4
 Depends on: B05
 Build: `pipeline/quran_match.py` exactly as §7.3 (raw score to classify, adjusted to rank, containment guard,
 `partial_ratio_alignment` + word-boundary expansion, edge rule, multi-location, attribution check),
