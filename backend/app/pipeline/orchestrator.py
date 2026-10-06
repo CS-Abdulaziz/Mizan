@@ -29,6 +29,7 @@ DetectorFactory.seed = 0
 
 _cache: TTLCache[R.CheckResult] = TTLCache(256, 24 * 3600)
 _by_id: TTLCache[R.CheckResult] = TTLCache(1024, 24 * 3600)
+_pending: set[asyncio.Task] = set()
 
 
 class InputTooLong(Exception):
@@ -345,7 +346,10 @@ async def run_check(text: str, channel: str = "web", lang_hint: str | None = Non
                                   "verdicts": [c.verdict for c in claims], "providers": usage.providers})
     _cache.put(key, result)
     _by_id.put(check_id, result)
-    await _persist(result, expires, channel, latency_ms, usage, sum(t.embed_tokens for t in traces))
+    task = asyncio.create_task(_persist(result, expires, channel, latency_ms, usage,
+                                        sum(t.embed_tokens for t in traces)))
+    _pending.add(task)  # keep a reference until done; storage must not delay the response
+    task.add_done_callback(_pending.discard)
     return result
 
 

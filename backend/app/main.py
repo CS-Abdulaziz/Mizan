@@ -37,6 +37,10 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     settings = get_settings()
     setup_logging(settings.log_level)
     log.info("startup")
+    try:
+        await session.get_pool()  # connect once at startup (remote pooler handshake is slow)
+    except session.DatabaseUnavailable as e:
+        log.warning("db_unavailable_at_startup", extra={"error": str(e)})
     await quran_match.load_index()
     await quran_match.load_translations()
     await hadith_retrieve.load_hadeeth_index()

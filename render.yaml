@@ -1,0 +1,68 @@
+# Render Blueprint for the Mizan backend (TASKS B17, SPEC §14).
+# Create it from the Render dashboard: New > Blueprint > this repo. Secrets are "sync: false":
+# Render asks for their values on first deploy (paste them from your local .env).
+services:
+  - type: web
+    name: mizan-backend
+    runtime: python
+    region: singapore          # closest Render region to the Supabase project (ap-northeast-1, Tokyo)
+    plan: free                 # free tier sleeps when idle: keep the /health pinger on (UptimeRobot, every 10 min)
+    buildCommand: >-
+      pip install -r backend/requirements.txt &&
+      python scripts/ingest_quran.py --no-db
+    startCommand: cd backend && uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    autoDeploy: true           # main deploys automatically
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: DATABASE_URL
+        sync: false
+      - key: LLM_PROVIDER
+        value: openai_compatible
+      - key: LLM_BASE_URL
+        value: https://generativelanguage.googleapis.com/v1beta/openai/
+      - key: LLM_API_KEY
+        sync: false
+      - key: LLM_MODEL_EXTRACT
+        value: gemini-3.6-flash
+      - key: LLM_MODEL_VERIFY
+        value: gemini-3.5-flash
+      - key: LLM_MODEL_REPLY
+        value: gemini-3.6-flash
+      - key: LLM_FALLBACK_MODELS
+        value: gemini-3.5-flash,gemini-3.6-flash,gemini-3.8-flash
+      - key: LLM_REASONING_EFFORT
+        value: none
+      - key: LLM_TIMEOUT_S
+        value: "15"
+      - key: GROQ_API_KEY
+        sync: false
+      - key: EMBEDDING_PROVIDER
+        value: gemini
+      - key: EMBEDDING_MODEL
+        value: gemini-embedding-001
+      - key: EMBEDDING_API_KEY
+        sync: false
+      - key: EMBEDDING_DIM
+        value: "1024"
+      - key: EMBEDDING_RPM
+        value: "95"
+      - key: EMBEDDING_TPM
+        value: "30000"
+      - key: QURANENC_KEY_EN
+        value: english_rwwad
+      - key: QURANENC_KEY_UR
+        value: urdu_junagarhi
+      - key: ALLOWED_ORIGINS
+        sync: false            # e.g. https://<pages-domain>,http://localhost:5173
+      - key: PUBLIC_WEB_URL
+        sync: false            # frontend base URL, for bot "details" links
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: TELEGRAM_WEBHOOK_SECRET
+        sync: false
+      - key: MAX_INPUT_CHARS
+        value: "4000"
+      - key: RESULT_TTL_HOURS
+        value: "24"

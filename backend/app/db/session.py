@@ -13,6 +13,8 @@ from app.core.logging import get_logger
 
 log = get_logger(__name__)
 
+POOL_CREATE_TIMEOUT_S = 20.0  # TLS + auth to a remote pooler can take several seconds
+
 _pool: asyncpg.Pool | None = None
 _lock: asyncio.Lock | None = None
 _lock_loop: asyncio.AbstractEventLoop | None = None
@@ -52,22 +54,23 @@ async def get_pool() -> asyncpg.Pool:
         try:
             _pool = await asyncio.wait_for(
                 asyncpg.create_pool(dsn, min_size=1, max_size=10, init=_init_conn, command_timeout=10),
-                timeout=get_settings().external_timeout_s,
+                timeout=POOL_CREATE_TIMEOUT_S,
             )
         except (OSError, asyncio.TimeoutError, asyncpg.PostgresError) as e:
             raise DatabaseUnavailable(type(e).__name__) from e
     return _pool
 
 
-async def ping(timeout_s: float = 3.0) -> bool:
+async def ping(timeout_s: float = 5.0) -> bool:
     """`select 1` against the DB (SPEC §14, AMENDMENT 8). Never raises."""
 
-    async def _ping() -> bool:
-        pool = await get_pool()
-        async with pool.acquire() as conn:
-            return await conn.fetchval("select 1") == 1
-
     try:
+        pool = await get_pool()  # creation has its own timeout; the ping timeout covers the query only
+
+        async def _ping() -> bool:
+            async with pool.acquire() as conn:
+                return await conn.fetchval("select 1") == 1
+
         return await asyncio.wait_for(_ping(), timeout=timeout_s)
     except Exception as e:  # noqa: BLE001 - health check must not raise
         log.warning("db_ping_failed", extra={"error": type(e).__name__})

@@ -11,7 +11,16 @@ Exact steps for things only the human can do. Work continues on independent task
 2. **Sharia reviewer sign-off (D-20, D-11, D-1), pending.** Send them `backend/app/core/grade_rules.py`, the
    SPEC §8.2 table, and DECISIONS D-1 / D-11 / D-20. Their edits go straight into `grade_rules.py` (keyword lists)
    or come back to me for the table. The pipeline runs with the current rules meanwhile.
-3. *(more items are added below as tasks reach a HUMAN step)*
+3. **Deploy the backend on Render (B17).** On render.com: New > Blueprint > connect `OmarCsY/Mizan` > it reads
+   `render.yaml`. When asked, paste from your local `.env`: `DATABASE_URL`, `LLM_API_KEY`, `EMBEDDING_API_KEY`,
+   `GROQ_API_KEY`; set `ALLOWED_ORIGINS` to the frontend's Cloudflare Pages URL plus `http://localhost:5173`
+   (comma-separated) and `PUBLIC_WEB_URL` to the Pages URL. Leave the Telegram vars empty for now. Deploy, wait for
+   the first boot (~1-2 min), then open `https://<service>.onrender.com/health` -> `{"ok": true, "db": true}`.
+   Send me the URL; I will run the live check against it and give it to the frontend teammate (`VITE_API_URL`).
+4. **Pinger (B17).** On uptimerobot.com (free): Add New Monitor > HTTP(s) > URL
+   `https://<service>.onrender.com/health` > interval 10 minutes. Keeps Render (free tier sleeps) and Supabase
+   (pauses after ~1 week idle) awake through final judging 19-22 Oct.
+5. *(more items are added below as tasks reach a HUMAN step)*
 
 ## Resume here
 
@@ -205,6 +214,8 @@ Depends on: B16
 Build: `render.yaml` (or documented manual settings), start command per §14, env vars list, README deploy section.
 AC: public URL `/health` 200; `/api/v1/check` works from an external machine; frontend teammate given the URL.
 HUMAN: create the Render service, paste env vars, set up the pinger (UptimeRobot or cron-job.org) on `/health` every 10 min.
+STATUS 2026-10-06: prepared (`render.yaml` Blueprint, build downloads the Mushaf, README deploy section, startup
+connects the DB pool once, storage off the response path). Not ticked until deployed: see "Waiting on Azoz" 3-4.
 
 ---
 
