@@ -67,7 +67,8 @@ class Settings(BaseSettings):
     external_timeout_s: float = 8.0
     external_max_concurrency: int = 4
 
-    # Telegram
+    # Telegram (D-28: off by default; the team uses the teammate's bots)
+    enable_telegram_bot: bool = False
     telegram_bot_token: str = ""
     telegram_webhook_secret: str = ""
 

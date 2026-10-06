@@ -58,6 +58,10 @@ def test_webhook_requires_secret(monkeypatch: pytest.MonkeyPatch) -> None:
     from app.core.config import get_settings
     from app.main import app
 
+    get_settings.cache_clear()
+    with TestClient(app) as c:
+        assert c.post("/telegram/webhook", json={}).status_code == 404  # disabled by default (D-28)
+    monkeypatch.setenv("ENABLE_TELEGRAM_BOT", "true")
     monkeypatch.setenv("TELEGRAM_WEBHOOK_SECRET", "s3cret")
     get_settings.cache_clear()
     try:
@@ -69,4 +73,5 @@ def test_webhook_requires_secret(monkeypatch: pytest.MonkeyPatch) -> None:
             assert r.status_code == 503  # no bot token configured in tests
     finally:
         monkeypatch.delenv("TELEGRAM_WEBHOOK_SECRET")
+        monkeypatch.delenv("ENABLE_TELEGRAM_BOT")
         get_settings.cache_clear()

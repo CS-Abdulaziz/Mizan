@@ -58,6 +58,8 @@ services:
         sync: false            # e.g. https://<pages-domain>,http://localhost:5173
       - key: PUBLIC_WEB_URL
         sync: false            # frontend base URL, for bot "details" links
+      - key: ENABLE_TELEGRAM_BOT
+        value: "false"          # D-28
       - key: TELEGRAM_BOT_TOKEN
         sync: false
       - key: TELEGRAM_WEBHOOK_SECRET

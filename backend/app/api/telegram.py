@@ -20,6 +20,8 @@ _app = None
 
 async def start_bot() -> None:
     global _app
+    if not get_settings().enable_telegram_bot:
+        return  # D-28: disabled; the webhook route answers 404
     from bot.telegram_bot import build_application
 
     _app = build_application()
@@ -39,6 +41,8 @@ async def stop_bot() -> None:
 
 @router.post("/telegram/webhook")
 async def webhook(request: Request) -> dict[str, bool]:
+    if not get_settings().enable_telegram_bot:
+        raise HTTPException(status_code=404, detail="not_found")
     secret = get_settings().telegram_webhook_secret
     got = request.headers.get("X-Telegram-Bot-Api-Secret-Token", "")
     if not secret or not hmac.compare_digest(got, secret):
