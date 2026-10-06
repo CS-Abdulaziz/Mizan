@@ -2,6 +2,13 @@
 
 Multilingual Islamic quotation verifier. The frontend treats the verification backend as a REST service.
 
+**Live backend:** https://mizan-backend-d4t5.onrender.com · interactive API docs:
+https://mizan-backend-d4t5.onrender.com/docs · health: https://mizan-backend-d4t5.onrender.com/health
+
+**Channels.** The web app (frontend/) and the team's Telegram and WhatsApp bots all call the same endpoint,
+`POST /api/v1/check` (contract: [docs/API_CONTRACT.md](docs/API_CONTRACT.md)); the backend's own Telegram webhook is
+disabled (D-28).
+
 ## What Mizan does
 
 Forward or paste any message in Arabic, English or Urdu. Mizan finds every quoted Quran verse and hadith, checks
@@ -56,28 +63,30 @@ See [frontend/README.md](frontend/README.md) for development, demo examples, API
 
 The backend-to-frontend interface is documented in [docs/API_CONTRACT.md](docs/API_CONTRACT.md).
 
-## Backend (FastAPI)
+## Backend (FastAPI): run from scratch
 
-Python 3.11. Full setup from scratch:
+Python 3.11 and a Supabase (Postgres + pgvector) project. The data steps run **once, from a developer machine**,
+and fill Supabase; the deployed server only reads Supabase and never downloads source data (D-29).
 
 ```sh
 cd backend && pip install -r requirements.txt && cd ..
-cp .env.example .env                      # fill DATABASE_URL, LLM_*, EMBEDDING_*, GROQ_API_KEY
-python scripts/migrate.py                 # schema on Supabase (pgvector)
-python scripts/ingest_quran.py            # Mushaf (King Fahd Complex) -> data/quran.json + quran_verses
-python scripts/ingest_quranenc.py         # approved en/ur translations
-python scripts/ingest_hadeethenc.py --all # HadeethEnc ar/en/ur
-python scripts/embed_corpus.py            # optional, daily (free-tier quota, see docs/DECISIONS.md D-19)
-cd backend && uvicorn app.main:app --reload --port 8000
+cp .env.example .env                      # fill DATABASE_URL (session pooler, port 5432), LLM_*, EMBEDDING_*, GROQ_API_KEY
+python scripts/migrate.py                 # schema (pgvector)
+python scripts/ingest_quran.py            # Mushaf from the King Fahd Complex -> quran_verses (dev machine only)
+python scripts/ingest_quranenc.py         # approved en/ur translations -> quran_translations
+python scripts/ingest_hadeethenc.py --all # HadeethEnc ar/en/ur -> hadiths, hadith_translations
+python scripts/embed_corpus.py            # optional, daily (free-tier quota, D-19)
+cd backend && uvicorn app.main:app --port 8000   # http://localhost:8000/docs
 ```
 
 Tests: `cd backend && pytest -q` (unit) and `pytest -q --live` (real sources, model and DB).
-Try the full pipeline on demo messages: `python scripts/try_check.py`.
+Demo inputs through the full pipeline: `python scripts/try_check.py --video`.
 
 ### Deploy (Render)
 
-`render.yaml` is a Render Blueprint: New > Blueprint > this repo, region Singapore, then paste the secret env
-values when asked (`DATABASE_URL`, `LLM_API_KEY`, `EMBEDDING_API_KEY`, `GROQ_API_KEY`, `ALLOWED_ORIGINS`, ...).
-The build step downloads the Mushaf from the King Fahd Complex (`ingest_quran.py --no-db`), so the Quran text is
-never committed. Health check: `GET /health` (queries the DB, so a pinger keeps both Render and Supabase awake).
-Startup loads the Mushaf, the approved translations and the HadeethEnc index (about 1 minute on first boot).
+`render.yaml` is a Render Blueprint. Build: `pip install -r backend/requirements.txt` only; start:
+`cd backend && uvicorn app.main:app --host 0.0.0.0 --port $PORT`. Paste the secret env values when asked
+(`DATABASE_URL`, `LLM_API_KEY`, `EMBEDDING_API_KEY`, `GROQ_API_KEY`, `ALLOWED_ORIGINS`, `PUBLIC_WEB_URL`). At
+startup the server loads the Mushaf, approved translations and the HadeethEnc index from Supabase (~1 min on first
+boot). `GET /health` queries the DB, so an uptime pinger keeps both Render and Supabase awake. Before judging:
+`python scripts/warm_cache.py --api <URL>`.
