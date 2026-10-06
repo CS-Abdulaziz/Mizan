@@ -142,6 +142,8 @@ def get_index() -> QuranIndex | None:
 # =========================================================================== matching (B11, SPEC §7.3)
 
 import difflib  # noqa: E402
+import itertools  # noqa: E402
+import re  # noqa: E402
 from typing import Literal  # noqa: E402
 
 from rapidfuzz import fuzz, process  # noqa: E402
@@ -234,24 +236,72 @@ def _skeleton(w: str) -> str:
     return "".join(out)
 
 
-def same_word(a: str, b: str) -> bool:
-    """Equal, or a known Uthmani / imla'i spelling variant: alif written or not, waw or ya written for alif,
-    doubled letters (e.g. the two spellings of 'the heavens' or 'the prayer')."""
-    if a == b:
-        return True
-    if min(len(a), len(b)) < 3:
-        return False
-    waw, ya, alif = "و", "ي", "ا"
-    for x, y in ((a, b), (a.replace(waw, alif), b.replace(waw, alif)), (a.replace(ya, alif), b.replace(ya, alif))):
-        if _skeleton(x) == _skeleton(y):
-            return True
-    return False
+DAGGER_ALIF = "\u0670"
+SMALL_WAW, SMALL_YEH, SMALL_HIGH_YEH = "\u06E5", "\u06E6", "\u06E7"
+HAMZA_ABOVE = "\u0654"
+_LETTER_WITH_DAGGER = re.compile("([\u0648\u0649\u064A])(?=[\u064B-\u0652]*\u0670)")  # و / ى / ي carrying a dagger alif
 
 
-def word_diff(q: list[str], src: list[str]) -> list[DiffOp]:
-    """Word-level differences between the quote and the aligned Mushaf span (edge rule applied)."""
+def uthmani_variants(word: str) -> set[str]:
+    """Accepted modern spellings of ONE Uthmani word, licensed only by that word's own marks (D-31):
+    dagger alif written as alif or not; a waw / ya carrying a dagger alif written as alif (الصلوٰة -> الصلاة);
+    small waw / ya written as letters; a hamza mark on a seat written as ء / و / ي. Plus the plain normalized form."""
+    out = {normalize_ar(word)}
+    with_alif = word.replace(DAGGER_ALIF, "\u0627")
+    seat_alif = _LETTER_WITH_DAGGER.sub("\u0627", word)
+    cands = {with_alif, seat_alif, seat_alif.replace(DAGGER_ALIF, "")}
+    cands |= {c.replace(SMALL_WAW, "\u0648").replace(SMALL_YEH, "\u064A").replace(SMALL_HIGH_YEH, "\u064A") for c in set(cands)}
+    if HAMZA_ABOVE in word:
+        cands |= {c.replace("\u0640" + HAMZA_ABOVE, carrier).replace(HAMZA_ABOVE, "") for c in set(cands)
+                  for carrier in ("\u0621", "\u0648", "\u064A")}
+        cands |= {re.sub("\u0640?[\u064B-\u0652]*" + HAMZA_ABOVE, carrier, c) for c in set(cands)
+                  for carrier in ("\u0621", "\u0648", "\u064A")}
+    out |= {normalize_ar(c) for c in cands}
+    return {x for x in out if x and " " not in x}
+
+
+def verse_variants(index: QuranIndex, vi: int, form: str) -> list[frozenset[str]]:
+    """Per token of verse `vi` in `form`: the exact token, the accepted forms of the matching Uthmani word, and the
+    token at the same position in the other Mushaf text (imla'i <-> Uthmani alignment). Cached on the index."""
+    cache = getattr(index, "_variant_cache", None)
+    if cache is None:
+        cache = index._variant_cache = {}  # type: ignore[attr-defined]
+    key = (vi, form)
+    if key in cache:
+        return cache[key]
+    v = index.verses[vi]
+    clean, iml = tokens(v.clean), tokens(v.imlaei_clean)
+    uth = [w for w in v.uthmani.split() if normalize_ar(w)]
+    uth_ok = len(uth) == len(clean)
+    paired = len(clean) == len(iml)
+    own = clean if form == "clean" else iml
+    res: list[frozenset[str]] = []
+    for i, t in enumerate(own):
+        acc = {t}
+        if paired:
+            acc |= {clean[i], iml[i]}
+        if uth_ok and (form == "clean" or paired):
+            acc |= uthmani_variants(uth[i])
+        res.append(frozenset(acc))
+    cache[key] = res
+    return res
+
+
+def word_diff(q: list[str], src: list[str], src_var: list[frozenset[str]] | None = None) -> list[DiffOp]:
+    """Word-level differences between the quote and the aligned Mushaf span (edge rule applied).
+
+    A quote word equals a Mushaf word only if it is one of that word's accepted forms (D-31). Words split or joined
+    differently (يا ايها / يايها) are accepted only when the joined quote equals a joined combination of accepted forms."""
+    var = src_var if src_var is not None and len(src_var) == len(src) else [frozenset({t}) for t in src]
     ops: list[DiffOp] = []
-    codes = difflib.SequenceMatcher(None, q, src, autojunk=False).get_opcodes()
+    qs = [q[i] for i in range(len(q))]
+    # map each quote token to the source position it matches, so SequenceMatcher sees accepted forms as equal
+    canon = list(src)
+    q_norm = []
+    for t in qs:
+        q_norm.append(t)
+    matcher_q = [next((canon[j] for j in range(len(src)) if t in var[j]), t) for t in q_norm]
+    codes = difflib.SequenceMatcher(None, matcher_q, canon, autojunk=False).get_opcodes()
     for k, (tag, i1, i2, j1, j2) in enumerate(codes):
         if tag == "equal":
             continue
@@ -259,10 +309,12 @@ def word_diff(q: list[str], src: list[str]) -> list[DiffOp]:
         if tag == "insert" and (k == 0 or k == len(codes) - 1):
             continue  # Mushaf words at the edges of the aligned span: partial quoting, not an alteration
         if tag == "replace":
-            if "".join(qa) == "".join(sa) or same_word("".join(qa), "".join(sa)):
-                continue  # words split / joined differently, or one spelling variant
-            if len(qa) == len(sa) and all(same_word(x, y) for x, y in zip(qa, sa)):
+            if len(qa) == len(sa) and all(x in var[j1 + n] for n, x in enumerate(qa)):
                 continue
+            if len(sa) <= 3 and len(qa) <= 3:
+                combos = {"".join(c) for c in itertools.product(*[sorted(var[j]) for j in range(j1, j2)])}
+                if "".join(qa) in combos:
+                    continue  # words split / joined differently
         op = {"replace": "replace", "delete": "insert", "insert": "delete"}[tag]
         ops.append(DiffOp(op, " ".join(qa), " ".join(sa)))
     return ops
@@ -274,6 +326,13 @@ def word_diff(q: list[str], src: list[str]) -> list[DiffOp]:
 def _verse_tokens(index: QuranIndex, vi: int, form: str) -> list[str]:
     v = index.verses[vi]
     return tokens(v.clean if form == "clean" else v.imlaei_clean)
+
+
+def _window_variants(index: QuranIndex, w: Window, form: str) -> list[frozenset[str]]:
+    out: list[frozenset[str]] = []
+    for vi in range(w.start, w.start + w.size):
+        out.extend(verse_variants(index, vi, form))
+    return out
 
 
 def _score_window(index: QuranIndex, q: str, q_tokens: list[str], w: Window, form: str) -> Candidate:
@@ -300,7 +359,8 @@ def _score_window(index: QuranIndex, q: str, q_tokens: list[str], w: Window, for
     contained = len(q_tokens) > T.QURAN_CONTAINMENT_RATIO * len(tokens(text))
     return Candidate(
         verses=tuple(covered), raw=raw, adj=adj, form=form, contained=contained,
-        ops=word_diff(q_tokens, aligned), tok_start=tok_start - first_off, tok_end=tok_end - first_off,
+        ops=word_diff(q_tokens, aligned, _window_variants(index, w, form)[tok_start:tok_end]),
+        tok_start=tok_start - first_off, tok_end=tok_end - first_off,
     )
 
 
@@ -338,7 +398,8 @@ def _short_quote(index: QuranIndex, q_tokens: list[str], cited: tuple[int, int |
         if vi is not None:
             for form in ("clean", "imlaei"):
                 vt = _verse_tokens(index, vi, form)
-                if q_tokens and all(any(same_word(t, x) for x in vt) for t in q_tokens):
+                vv = verse_variants(index, vi, form)
+                if q_tokens and all(any(t in acc for acc in vv) for t in q_tokens):
                     c = Candidate((vi,), 100.0, 100.0, form, False, [], 0, len(vt))
                     return VerseMatch("verified", best=c, locations=[(vi,)], candidates=[c], cited=cited)
     return VerseMatch("too_short", cited=cited, note="too_short")

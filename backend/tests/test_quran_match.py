@@ -117,11 +117,61 @@ def test_uthmani_display_span_comes_from_data(idx: qm.QuranIndex) -> None:
     assert span and span in v(idx, 2, 255).uthmani
 
 
-def test_word_diff_ignores_spelling_variants_and_edges() -> None:
-    assert qm.same_word("السموات", "السماوات") and qm.same_word("الصلوه", "الصلاه")
-    assert not qm.same_word("يعلمون", "تعلمون")
+def test_word_diff_edges_are_not_alterations() -> None:
     # Mushaf words before/after the quoted part are not alterations
     assert qm.word_diff(["ب", "ج"], ["ا", "ب", "ج", "د"]) == []
+
+
+# ----------------------------------------------------------------------- D-31: no generic spelling tolerance
+
+
+def _modern(idx: qm.QuranIndex, s: int, a: int) -> list[str]:
+    """Quote tokens in modern spelling: each Uthmani word with its dagger alifs written as alif (from the data)."""
+    v = v_(idx, s, a)
+    return [qm.normalize_ar(w.replace("ٰ", "ا")) for w in v.uthmani.split() if qm.normalize_ar(w)]
+
+
+def v_(idx: qm.QuranIndex, s: int, a: int) -> qm.Verse:
+    return idx.verses[idx.by_ref[(s, a)]]
+
+
+def test_d31_wahid_for_ahad_is_misquoted(idx: qm.QuranIndex) -> None:
+    t = tokens(v_(idx, 112, 1).imlaei_clean)
+    original = t[-1]
+    q = t[:-1] + ["واحد"]
+    m = qm.match_arabic(" ".join(q), None, idx)
+    assert m.status == "misquoted_candidate"
+    assert [(o.op, o.quoted, o.source) for o in m.best.ops] == [("replace", "واحد", original)]
+
+
+def test_d31_nar_for_nur_is_misquoted(idx: qm.QuranIndex) -> None:
+    target = next(x for x in idx.verses if "نور" in tokens(x.imlaei_clean) and 6 <= len(tokens(x.imlaei_clean)) <= 20)
+    q = ["نار" if w == "نور" else w for w in tokens(target.imlaei_clean)]
+    m = qm.match_arabic(" ".join(q), None, idx)
+    assert m.status != "verified" and any(o.quoted == "نار" for o in m.best.ops)
+
+
+def test_d31_added_leading_waw_is_misquoted(idx: qm.QuranIndex) -> None:
+    t = tokens(v_(idx, 2, 255).imlaei_clean)[:12]
+    j = next(k for k in range(2, len(t)) if not t[k].startswith("و"))
+    q = t[:j] + ["و" + t[j]] + t[j + 1 :]
+    m = qm.match_arabic(" ".join(q), None, idx)
+    assert m.status != "verified" and any(o.quoted == "و" + t[j] for o in m.best.ops)
+
+
+def test_d31_licensed_spellings_still_verified(idx: qm.QuranIndex) -> None:
+    for x in idx.verses:
+        w = x.uthmani
+        if 6 <= len(tokens(x.clean)) <= 20 and ("وٰ" in w or "ٰ" in w):
+            q = _modern(idx, x.surah, x.ayah)
+            m = qm.match_arabic(" ".join(q), None, idx)
+            assert m.status == "verified", (x.surah, x.ayah, [o for o in (m.best.ops if m.best else [])])
+            break
+    # the variant sets come from the word's own Uthmani marks
+    assert "الصلاه" in qm.uthmani_variants("ٱلصَّلَوٰةَ")
+    assert "السماوات" in qm.uthmani_variants("ٱلسَّمَٰوَٰتِ")
+    assert "مالك" in qm.uthmani_variants("مَٰلِكِ")
+    assert "واحد" not in qm.uthmani_variants("أَحَدٌ")
 
 
 @pytest.mark.parametrize(
