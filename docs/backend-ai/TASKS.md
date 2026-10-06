@@ -1,5 +1,42 @@
 # Backend + AI tasks
 
+## Final checklist (B26, SPEC §18), 2026-10-06
+
+| SPEC §18 item | Status | Evidence / what is left |
+|---|---|---|
+| Live link works from an external device; ar / en / ur examples right | **FAIL (pending deploy)** | Locally PASS: `python scripts/try_check.py --video` -> ar: altered 2:255 `misquoted` + fabricated hadith `not_established`; en: hadith `verified` (HadeethEnc); ur: 112:1 `verified`. Needs the Render deploy (below). |
+| All verdicts and statuses appear in real examples | PASS | `python scripts/verdict_examples.py > docs/VERDICT_EXAMPLES.md` (needs_review / evidence_request from live checks) |
+| No reference or grade absent from the sources | PASS | Texts, gradings, links copied from sources; ids validated in code; 5 automatic flags on test are check artifacts (EVALUATION.md) |
+| False-verified rate on the test split reported | PASS | 0.0% (0/39) for Mizan; 15.4% for Dorar-as-is |
+| Bench results + both baselines in EVALUATION.md with reviewed counts | **PARTIAL** | Mizan test 109/125, dorar_direct test complete, llm_baseline dev only (quota, D-25); 0/179 items reviewed |
+| Repo public, from-scratch instructions work, sources + licenses documented, no keys | **PARTIAL** | Docs done; full-history secret scan clean; making the repo public and a clean-machine test are human steps |
+| `/health` queries the DB; pinger; cache warmed | **PARTIAL** | `/health` runs `select 1` (PASS); pinger + warm cache after deploy |
+| Service up through 19-22 Oct, checked daily | PENDING | human, daily |
+
+### Commands for what is left (run from the repo root)
+
+```bash
+# 1. Deploy: render.com > New > Blueprint > OmarCsY/Mizan (reads render.yaml); paste DATABASE_URL, LLM_API_KEY,
+#    EMBEDDING_API_KEY, GROQ_API_KEY, ALLOWED_ORIGINS=<pages-url>,http://localhost:5173, PUBLIC_WEB_URL=<pages-url>
+curl -s https://<service>.onrender.com/health          # expect {"ok": true, "db": true}
+# 2. Pinger: uptimerobot.com > HTTP(s) monitor > https://<service>.onrender.com/health > every 10 min
+# 3. Finish / refresh the test-split numbers, then the report
+python bench/run.py --system mizan --split test --runs 1 --rpm 5
+python bench/run.py --system llm_baseline --split test --runs 1 --rpm 8
+python bench/metrics.py --split test --out bench/results/report.md
+# 4. Before each judging session (fills dorar_cache; ~30 min at 6/min)
+python scripts/warm_cache.py --api https://<service>.onrender.com
+# 5. Once a day until judging (free tier ~1,000 texts/day; resumes where it stopped)
+python scripts/embed_corpus.py
+# 6. Telegram (only if our own bot is enabled: ENABLE_TELEGRAM_BOT=true, D-28)
+python -c "import secrets; print(secrets.token_urlsafe(32))"   # -> TELEGRAM_WEBHOOK_SECRET on Render
+curl -s "https://api.telegram.org/bot<TOKEN>/setWebhook" -d "url=https://<service>.onrender.com/telegram/webhook" -d "secret_token=<SECRET>" -d 'allowed_updates=["message","callback_query"]'
+# 7. Sharia review applied
+python bench/build_items.py --apply-review
+# 8. Stronger secret scan before making the repo public
+gitleaks detect --no-banner -v
+```
+
 ## Waiting on Azoz
 
 Exact steps for things only the human can do. Work continues on independent tasks meanwhile.
