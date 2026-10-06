@@ -394,3 +394,169 @@ def uthmani_span(index: QuranIndex, c: Candidate) -> str:
 def candidate_text_clean(index: QuranIndex, c: Candidate) -> str:
     """Normalized imla'i text of the covered verses (sent to the verifier as the candidate text)."""
     return " ".join(index.verses[vi].imlaei_clean for vi in c.verses)
+
+
+# =========================================================================== non-Arabic path (B12, D-19)
+
+import re as _re  # noqa: E402
+
+_FOOTNOTE = _re.compile(r"\[\d+\]")
+_NON_WORD = _re.compile(r"[^\w\s]", _re.UNICODE)
+_URDU_MARKS = _re.compile(r"[ؐ-ًؚ-ٰٟ]")
+
+
+def normalize_translation(s: str) -> str:
+    """Lowercase, drop footnote markers, diacritics and punctuation (English / Urdu)."""
+    s = _FOOTNOTE.sub(" ", s)
+    s = _URDU_MARKS.sub("", s.lower())
+    s = _NON_WORD.sub(" ", s)
+    return " ".join(s.split())
+
+
+@dataclass
+class TranslationIndex:
+    """Approved QuranEnc translations in memory, per language: texts aligned with verse indices."""
+
+    texts: dict[str, list[str]] = field(default_factory=dict)  # lang -> display text per verse index
+    clean: dict[str, list[str]] = field(default_factory=dict)  # lang -> normalized text per verse index
+    keys: dict[str, str] = field(default_factory=dict)  # lang -> QuranEnc translation key
+
+
+_translations: TranslationIndex | None = None
+
+
+def _build_translations(index: QuranIndex, rows: list[tuple[int, str, str, str]]) -> TranslationIndex:
+    """rows: (verse_id, lang, tr_key, text)."""
+    ti = TranslationIndex()
+    id_to_idx = {v.id: i for i, v in enumerate(index.verses)}
+    for vid, lang, key, text in rows:
+        if lang not in ti.texts:
+            ti.texts[lang] = [""] * len(index.verses)
+            ti.clean[lang] = [""] * len(index.verses)
+            ti.keys[lang] = key
+        i = id_to_idx.get(vid)
+        if i is not None:
+            ti.texts[lang][i] = _FOOTNOTE.sub("", text).strip()
+            ti.clean[lang][i] = normalize_translation(text)
+    return ti
+
+
+async def load_translations(index: QuranIndex | None = None) -> TranslationIndex | None:
+    """From quran_translations in the DB, else from the local QuranEnc cache (data/raw/quranenc). Never raises."""
+    global _translations
+    index = index or get_index()
+    if index is None:
+        return None
+    rows: list[tuple[int, str, str, str]] = []
+    try:
+        from app.db.session import get_pool
+
+        pool = await get_pool()
+        rows = [(r["verse_id"], r["lang"], r["tr_key"], r["text"])
+                for r in await pool.fetch("select verse_id, lang, tr_key, text from quran_translations")]
+    except Exception as e:  # noqa: BLE001
+        log.warning("translations_db_unavailable", extra={"error": type(e).__name__})
+    if not rows:
+        from app.core.config import get_settings
+
+        s = get_settings()
+        by_ref = {(v.surah, v.ayah): v.id for v in index.verses}
+        for lang, key in (("en", s.quranenc_key_en), ("ur", s.quranenc_key_ur)):
+            d = DATA_DIR / "raw" / "quranenc" / key
+            for f in sorted(d.glob("*.json")) if d.exists() else []:
+                for r in json.loads(f.read_text(encoding="utf-8")):
+                    vid = by_ref.get((r["surah"], r["ayah"]))
+                    if vid:
+                        rows.append((vid, lang, key, r["translation"]))
+    if not rows:
+        log.warning("translations_unavailable")
+        return None
+    _translations = _build_translations(index, rows)
+    log.info("translations_loaded", extra={"langs": sorted(_translations.texts)})
+    return _translations
+
+
+def get_translations() -> TranslationIndex | None:
+    return _translations
+
+
+@dataclass
+class VerseCandidate:
+    verses: tuple[int, ...]
+    score: float  # 0-100, best evidence across paths
+    via: set[str] = field(default_factory=set)  # lexical | arabic | vector
+
+
+def lexical_translation_candidates(span: str, lang: str, top_k: int | None = None) -> list[VerseCandidate]:
+    ti = _translations
+    if ti is None or lang not in ti.clean:
+        return []
+    q = normalize_translation(span)
+    if len(q.split()) < 2:
+        return []
+    k = top_k or T.VERSE_LEXICAL_TOP_K
+    best: dict[int, float] = {}
+    for scorer in (fuzz.token_set_ratio, fuzz.partial_ratio, fuzz.ratio):
+        for _, score, i in process.extract(q, ti.clean[lang], scorer=scorer, limit=k * 4):
+            best[i] = max(best.get(i, 0.0), score)
+    # same mild length adjustment as the Arabic matcher, so a short verse quoted in full beats longer
+    # verses that merely contain its words
+    texts = ti.clean[lang]
+    adj = {i: sc * (0.85 + 0.15 * min(len(q), len(texts[i])) / max(len(q), len(texts[i]), 1)) for i, sc in best.items()}
+    ranked = sorted(adj.items(), key=lambda kv: -kv[1])[:k]
+    return [VerseCandidate((i,), sc, {"lexical"}) for i, sc in ranked]
+
+
+def arabic_query_candidates(ar_queries: list[str], index: QuranIndex) -> list[VerseCandidate]:
+    out: list[VerseCandidate] = []
+    for q in ar_queries:
+        if len(tokens(normalize_ar(q))) < T.QURAN_MIN_WORDS:
+            continue
+        m = match_arabic(q, None, index)
+        for c in m.candidates[:3]:
+            if not c.contained and c.raw >= T.QURAN_CANDIDATE_RAW:
+                out.append(VerseCandidate(c.verses, c.raw, {"arabic"}))
+    return out
+
+
+async def vector_candidates(span: str, lang: str, index: QuranIndex) -> list[VerseCandidate]:
+    """match_verse over embedded translations. Skipped (empty) when embeddings or the DB are unavailable."""
+    try:
+        from app.db.session import get_pool
+        from app.llm.embeddings import embed
+
+        vec = (await embed([span], input_type="query"))[0]
+        pool = await get_pool()
+        rows = await pool.fetch("select verse_id, score from match_verse($1, $2, $3)", vec, lang, T.VERSE_VECTOR_TOP_K)
+    except Exception as e:  # noqa: BLE001 - optional path (D-19)
+        log.info("verse_vector_path_skipped", extra={"error": type(e).__name__})
+        return []
+    id_to_idx = {v.id: i for i, v in enumerate(index.verses)}
+    return [VerseCandidate((id_to_idx[r["verse_id"]],), float(r["score"]) * 100, {"vector"})
+            for r in rows if r["verse_id"] in id_to_idx]
+
+
+def merge_candidates(groups: list[list[VerseCandidate]], top: int) -> list[VerseCandidate]:
+    merged: dict[tuple[int, ...], VerseCandidate] = {}
+    for group in groups:
+        for c in group:
+            m = merged.get(c.verses)
+            if m is None:
+                merged[c.verses] = VerseCandidate(c.verses, c.score, set(c.via))
+            else:
+                m.score = max(m.score, c.score)
+                m.via |= c.via
+    # evidence from more than one path ranks first, then the score
+    return sorted(merged.values(), key=lambda c: (-len(c.via), -c.score))[:top]
+
+
+async def match_translation(span: str, lang: str, ar_queries: list[str], index: QuranIndex | None = None,
+                            use_vectors: bool = True) -> list[VerseCandidate]:
+    """SPEC §7.3 non-Arabic quote: candidates for the verifier (top VERSE_VERIFIER_TOP)."""
+    index = index or get_index()
+    if index is None:
+        return []
+    lexical = lexical_translation_candidates(span, lang)
+    arabic = arabic_query_candidates(ar_queries, index)
+    vector = await vector_candidates(span, lang, index) if use_vectors else []
+    return merge_candidates([lexical, arabic, vector], T.VERSE_VERIFIER_TOP)

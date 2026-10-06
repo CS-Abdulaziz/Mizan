@@ -152,7 +152,7 @@ thresholds in `core/thresholds.py`.
 AC: `tests/test_quran_match.py` implements **all six cases in §7.3** built from `data/quran.json` by reference,
 and they pass. Plus surah parser tests (5 formats).
 
-### [ ] B12 · Non-Arabic verse path (P0)
+### [x] B12 · Non-Arabic verse path (P0)
 Depends on: B08, B11
 Build: vector search via `match_verse` + literal Arabic queries through B11, merge, top 6 to verifier.
 AC: given an approved English and Urdu translation of 3 verses (taken from `quran_translations`), the correct

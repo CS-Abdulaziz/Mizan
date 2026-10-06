@@ -38,6 +38,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     setup_logging(settings.log_level)
     log.info("startup")
     await quran_match.load_index()
+    await quran_match.load_translations()
     cleanup = asyncio.create_task(cleanup_expired_results_forever())
     try:
         yield
