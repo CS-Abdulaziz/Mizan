@@ -21,6 +21,10 @@ ACCEPTED_ISNAD: list[str] = ["إسناده صحيح", "إسناده حسن", "إ
 # ... except these, which stay unclassified (a statement about narrators, not a grading)
 ISNAD_UNCLASSIFIED: list[str] = ["رجاله ثقات"]
 
+# A grading that explicitly refers to a narrator is about that narrator, not the hadith -> unclassified
+# (bench dev finding, D-26, pending SH sign-off). Checked after rule 3 (very weak), before rules 4-6.
+NARRATOR_ONLY: list[str] = ["يعني عن الراوي", "يعني الراوي", "عن الراوي"]
+
 # Rule 5: weak -> weak
 WEAK: list[str] = ["ضعيف", "إسناده ضعيف", "فيه ضعف", "فيه انقطاع", "مرسل"]
 

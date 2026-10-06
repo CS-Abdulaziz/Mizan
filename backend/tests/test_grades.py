@@ -35,6 +35,7 @@ def test_spec_cases(book: str, grading: str, expected: str) -> None:
         ("أخرجه في صحيحه", "unclassified"),  # whole-word match: «صحيحه» is not «صحيح» (D-11, pending SH)
         ("صحيح لغيره", "accepted"),
         ("مرسل", "weak"),
+        ("صحيح [يعني عن الراوي أبي الصلت]", "unclassified"),  # about a narrator, not the hadith (D-26)
     ],
 )
 def test_more_phrases(grading: str, expected: str) -> None:

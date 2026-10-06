@@ -32,6 +32,8 @@ def classify_text(grade_text: str) -> str:
     t = _tok(grade_text)
     if _any(t, R.VERY_WEAK):
         return "very_weak"
+    if _any(t, R.NARRATOR_ONLY):
+        return "unclassified"
     if _any(t, R.ISNAD_UNCLASSIFIED) and not _any(t, R.ACCEPTED_ISNAD):
         return "unclassified"
     if _any(t, R.ACCEPTED_ISNAD):
