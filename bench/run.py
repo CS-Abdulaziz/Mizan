@@ -68,11 +68,19 @@ async def system_mizan(item: dict[str, Any]) -> dict[str, Any]:
     except ImportError as e:
         raise SystemNotReady("mizan: orchestrator not built yet (TASKS B16)") from e
     await _ensure_loaded()
-    orchestrator._cache.clear()  # each run must really run (no LRU hits across runs)
-    result = await orchestrator.run_check(item["text"], channel="api")
-    out = result.model_dump(mode="json")
-    out["_metrics"] = orchestrator.metrics_for(result.check_id)
-    return out
+    for attempt in range(3):
+        orchestrator._cache.clear()  # each run must really run (no LRU hits across runs)
+        result = await orchestrator.run_check(item["text"], channel="api")
+        m = orchestrator.metrics_for(result.check_id) or {}
+        if not m.get("llm_failures"):
+            out = result.model_dump(mode="json")
+            out["_metrics"] = m
+            return out
+        # an LLM call failed on every provider (free-tier per-minute quotas): the verdict would reflect the
+        # outage, not the system. Wait for the minute window to reset and run the item again.
+        if attempt < 2:
+            await asyncio.sleep(65)
+    raise QuotaStop("LLM unavailable on every provider (quota); resume later")
 
 
 async def system_llm_baseline(item: dict[str, Any]) -> dict[str, Any]:

@@ -346,8 +346,10 @@ async def run_check(text: str, channel: str = "web", lang_hint: str | None = Non
         *(process_claim(i, c, lang, traces[i]) for i, c in enumerate(ex.claims)), return_exceptions=True
     )
     claims: list[R.ClaimResult] = []
+    llm_failures = 0
     for i, (c, out) in enumerate(zip(ex.claims, outcomes, strict=True)):
         if isinstance(out, BaseException):
+            llm_failures += isinstance(out, LLMError)
             log.warning("claim_failed", extra={"claim_index": i, "error": type(out).__name__})
             claims.append(R.ClaimResult(**_base(i, c, lang), verdict="not_found", source_status="source_unavailable"))
         else:
@@ -377,7 +379,8 @@ async def run_check(text: str, channel: str = "web", lang_hint: str | None = Non
     _by_id.put(check_id, result)
     _metrics.put(check_id, {"latency_ms": latency_ms, "tokens_in": usage.input_tokens,
                             "tokens_out": usage.output_tokens, "providers": usage.providers,
-                            "embed_tokens": sum(t.embed_tokens for t in traces)})
+                            "embed_tokens": sum(t.embed_tokens for t in traces),
+                            "llm_failures": llm_failures + (0 if ex.llm_ok else 1)})
     task = asyncio.create_task(_persist(result, expires, channel, latency_ms, usage,
                                         sum(t.embed_tokens for t in traces)))
     _pending.add(task)  # keep a reference until done; storage must not delay the response
