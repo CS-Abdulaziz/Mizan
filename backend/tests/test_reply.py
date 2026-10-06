@@ -60,3 +60,10 @@ async def test_live_reply(lang: str) -> None:
     text, err = await rp.make_reply(result(), lang)
     print(f"\n[{lang}] {text}")
     assert err is None and text and len(text.split()) <= 200
+
+
+def test_url_check_ignores_trailing_arabic_and_urdu_punctuation() -> None:
+    allowed = '{"link": "https://dorar.net/hadith/search?q=x"}'
+    assert rp.urls_ok("دیکھیں: https://dorar.net/hadith/search?q=x۔", allowed)
+    assert rp.urls_ok("انظر https://dorar.net/hadith/search?q=x، شكرًا", allowed)
+    assert not rp.urls_ok("see https://evil.example/x.", allowed)

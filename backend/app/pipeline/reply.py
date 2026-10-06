@@ -21,7 +21,7 @@ from app.models.result import CheckResult
 log = get_logger(__name__)
 
 LANG_NAMES = {"ar": "Arabic", "en": "English", "ur": "Urdu"}
-_URL = re.compile(r"https?://[^\s\"'<>)\]]+")
+_URL = re.compile(r"https?://[^\s\"'<>)\]،؛؟۔«»]+")  # stop at Arabic/Urdu punctuation
 
 
 class ReplyOut(BaseModel):
@@ -47,7 +47,7 @@ def facts(result: CheckResult) -> dict:
 
 
 def urls_ok(reply: str, allowed: str) -> bool:
-    return all(u.rstrip(".,;:") in allowed for u in _URL.findall(reply))
+    return all(u.rstrip(".,;:!?") in allowed for u in _URL.findall(reply))
 
 
 async def make_reply(result: CheckResult, lang: str | None = None) -> tuple[str | None, str | None]:
