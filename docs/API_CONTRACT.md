@@ -165,3 +165,18 @@ Request `{ "check_id": "...", "claim_index": 0, "issue": "wrong_verdict", "note"
 ## GET /health
 
 `200 {"ok": true, "db": true}` or `503`.
+
+## POST /api/v1/check/file  (P2, added 2026-10-06; additive, existing shapes unchanged)
+
+`multipart/form-data` with one field `file`: `.txt`, `.docx` or `.pdf`, at most 5 MB. Paragraphs are packed into
+chunks of at most 4,000 characters; up to 10 chunks are checked (`truncated: true` if the file had more).
+
+```json
+{ "filename": "message.docx", "chunks": 3, "checked_chunks": 3, "truncated": false,
+  "summary": { "verified": 2, "not_established": 1 },
+  "checks": [ { "chunk": 0, "check_id": "...", "status": "ok" } ],
+  "claims": [ { "chunk": 0, "check_id": "...", "index": 0, "type": "hadith", "verdict": "not_established", "...": "same fields as a claim above" } ] }
+```
+
+Errors: `413` file too large · `415` unsupported type · `422` empty file · `429` rate limited · `503` unavailable.
+Each chunk's full result is available at `GET /api/v1/check/{check_id}` for 24 h.

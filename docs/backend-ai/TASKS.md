@@ -311,6 +311,6 @@ Depends on: everything P0
 AC: every item of SPEC §18 checked and ticked in this file; print the final live URL, repo URL, and the 3
 demo inputs with their verdicts for the video.
 
-### [ ] B27 · File report (P2)
+### [x] B27 · File report (P2)
 Depends on: B16
 Build: `POST /api/v1/check/file` (TXT/DOCX/PDF ≤ 5 MB, split into paragraphs, batch through orchestrator, aggregate).
