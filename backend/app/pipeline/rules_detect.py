@@ -30,6 +30,10 @@ TRIGGERS: list[tuple[re.Pattern[str], ClaimType]] = [
     (re.compile(r"حدیث|حديث"), "hadith"),
 ]
 
+# Generic triggers point at a quote only when one follows in quotation marks (no sentence fallback):
+# «أعطني حديثًا يثبت…» is a request, not a quote (D-27).
+QUOTED_ONLY = {r"\bSurah\b", r"حدیث|حديث"}
+
 QUOTE_PAIRS = {"﴿": "﴾", "«": "»", '"': '"', "“": "”", "„": "“"}
 _OPEN = re.compile("[" + re.escape("".join(QUOTE_PAIRS)) + "]")
 _SENTENCE_END = re.compile(r"[.!?؟\n]")
@@ -79,7 +83,9 @@ def detect(text: str) -> list[RuleSpan]:
     spans: list[RuleSpan] = []
     for pattern, ctype in TRIGGERS:
         for m in pattern.finditer(text):
-            rng = _quoted_after(text, m.end()) or _sentence_after(text, m.end())
+            rng = _quoted_after(text, m.end())
+            if rng is None and pattern.pattern not in QUOTED_ONLY:
+                rng = _sentence_after(text, m.end())
             if not rng:
                 continue
             start, end = _strip(text, *rng)
@@ -89,3 +95,17 @@ def detect(text: str) -> list[RuleSpan]:
                 continue  # overlaps a span already found by an earlier trigger
             spans.append(RuleSpan(ctype, start, end, text[start:end]))
     return sorted(spans, key=lambda s: s.start)
+
+
+# Requests to FIND evidence (SPEC §8.4 evidence_request), in Arabic, English and Urdu (D-27).
+EVIDENCE_REQUEST = [
+    re.compile(r"(?:أعطني|اعطني|أعطوني|هات|هاتوا|أريد|اريد|ابحث\s+لي\s+عن|اذكر\s+لي|أرسل\s+لي)\s+(?:\S+\s+)?"
+               r"(?:دليل|حديث|آية|اية)", re.I),
+    re.compile(r"\b(?:give|find|show|send|tell)\s+me\s+(?:a|an|any|the)?\s*(?:hadith|verse|evidence|proof|ayah)", re.I),
+    re.compile(r"(?:حدیث|آیت|دلیل)\s+(?:بتائیں|بتاؤ|دیں|دکھائیں|بھیجیں)"),
+]
+
+
+def is_evidence_request(text: str) -> bool:
+    return any(p.search(text) for p in EVIDENCE_REQUEST)
+

@@ -200,3 +200,21 @@ async def test_explicit_trigger_overrides_attributed_saying(monkeypatch: pytest.
     monkeypatch.setattr(ex, "_llm_extract", fake_llm(out))
     c = (await ex.extract(msg)).claims[0]
     assert c.type == "quran" and c.span == v and c.lang == "ur"
+
+
+@pytest.mark.parametrize("msg", [
+    "أعطني حديثًا يثبت هذا الكلام",
+    "Give me a hadith that proves this statement.",
+    "Find me a verse that proves fasting on Monday is obligatory.",
+])
+async def test_evidence_request_is_not_a_claim(monkeypatch: pytest.MonkeyPatch, msg: str) -> None:
+    out = Extraction(intent="no_claims", personal_ruling_request=False, claims=[])
+    monkeypatch.setattr(ex, "_llm_extract", fake_llm(out))
+    res = await ex.extract(msg)
+    assert res.claims == [] and res.intent == "evidence_request"
+
+
+def test_bare_hadith_word_needs_quotes() -> None:
+    assert rules_detect.detect("أعطني حديثًا يثبت هذا الكلام") == []
+    h = hadith_ar()
+    assert [s.text for s in rules_detect.detect(f"هذا حديث «{h}»")] == [h]

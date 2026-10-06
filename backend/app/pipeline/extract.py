@@ -180,6 +180,11 @@ async def extract(text: str) -> ExtractionResult:
         )
         log.info("rules_added_claim", extra={"claim_type": r.type})
 
+    if rules_detect.is_evidence_request(text):
+        # a request to FIND evidence: rule-detected "claims" are the request's own words, not quotes (D-27)
+        res.claims = [c for c in res.claims if c.origin == "llm"]
+        if not res.claims:
+            res.intent = "evidence_request"
     res.claims.sort(key=lambda c: c.span_start)
     res.claims = res.claims[:MAX_CLAIMS]
     if res.claims and res.intent == "no_claims":
