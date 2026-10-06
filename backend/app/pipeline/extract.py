@@ -80,6 +80,34 @@ def find_span(text: str, span: str) -> tuple[int, int] | None:
     return (m.start(), m.end()) if m else None
 
 
+def tighten_span(text: str, start: int, end: int) -> tuple[int, int]:
+    """Drop a lead-in such as "قال الله تعالى:" and keep the inside of quotation marks when the span has them,
+    so the matchers see only the quoted words (bench dev finding, D-23)."""
+    seg = text[start:end]
+    for o, c in rules_detect.QUOTE_PAIRS.items():
+        i = seg.find(o)
+        j = seg.find(c, i + 1) if i != -1 else -1
+        if i != -1 and j != -1 and len(seg[i + 1 : j].split()) >= 2:
+            return rules_detect._strip(text, start + i + 1, start + j)
+    for pattern, _ in rules_detect.TRIGGERS:
+        m = pattern.match(seg.lstrip())
+        if m:
+            lead = len(seg) - len(seg.lstrip()) + m.end()
+            s2, e2 = rules_detect._strip(text, start + lead, end)
+            if len(text[s2:e2].split()) >= 2:
+                return s2, e2
+    return rules_detect._strip(text, start, end)
+
+
+def _trigger_type(text: str, start: int, end: int) -> str | None:
+    """Type implied by an explicit trigger right before / at the start of the span ("Allah says" -> quran)."""
+    window = text[max(0, start - 60) : min(end, start + 60)]
+    for pattern, ctype in rules_detect.TRIGGERS:
+        if ctype in ("quran", "hadith") and pattern.search(window) and pattern.pattern not in ("حدیث|حديث",):
+            return ctype
+    return None
+
+
 def _claim_lang(span: str, llm_lang: str) -> str:
     detected = script_lang(span)
     if detected in ("ar", "ur"):
@@ -126,10 +154,15 @@ async def extract(text: str) -> ExtractionResult:
                 res.hallucinated_spans += 1
                 log.warning("hallucination_span_dropped", extra={"claim_type": c.type})
                 continue
+            raw_start = pos[0]
+            pos = tighten_span(text, *pos)
             span = text[pos[0]:pos[1]]
+            ctype = c.type
+            if ctype == "attributed_saying":
+                ctype = _trigger_type(text, raw_start, pos[1]) or ctype
             res.claims.append(
                 ExtractedClaim(
-                    type=c.type, span=span, span_start=pos[0], span_end=pos[1],
+                    type=ctype, span=span, span_start=pos[0], span_end=pos[1],
                     lang=_claim_lang(span, c.lang),
                     claimed_source=c.claimed_source, ar_queries=_clean_queries(c.ar_queries, span),
                 )

@@ -167,3 +167,24 @@ def test_extraction_down_is_503(client: TestClient, monkeypatch: pytest.MonkeyPa
 def test_sources_endpoint(client: TestClient) -> None:
     body = client.get("/api/v1/sources?lang=en").json()
     assert body["sources"] and "free tier" in body["privacy"] and body["limits"]
+
+
+@needs_quran
+async def test_d23_dropped_word_is_misquoted_even_if_verifier_says_same_meaning(monkeypatch: pytest.MonkeyPatch) -> None:
+    from app.pipeline.extract import ExtractedClaim
+
+    index = quran_match.load_from_json()
+    quran_match._index = index
+    words = tokens(index.verses[index.by_ref[(2, 255)]].imlaei_clean)
+    quote = " ".join(words[:12] + words[13:20])  # one word removed from the middle
+
+    async def fake_verify(prompt_name, variables, schema, model):
+        first = re.search(r'<c id="([^"]+)"', variables["candidates"]).group(1)
+        return vf.VerifyOut(match_ids=[first], relation="same_meaning", confidence=0.98), LLMUsage()
+
+    monkeypatch.setattr(vf, "complete_json", fake_verify)
+    c = ExtractedClaim(type="quran", span=quote, span_start=0, span_end=len(quote), lang="ar", claimed_source=None,
+                       ar_queries=[quote])
+    out = await orchestrator.decide_quran(0, c, "ar", orchestrator.ClaimTrace())
+    assert out.verdict == "misquoted" and out.diff.kind == "wording"
+    assert any(o.op == "delete" and o.source == words[12] for o in out.diff.ops)

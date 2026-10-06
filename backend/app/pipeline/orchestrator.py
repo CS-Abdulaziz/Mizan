@@ -33,6 +33,9 @@ _pending: set[asyncio.Task] = set()
 _metrics: TTLCache[dict] = TTLCache(2048, 24 * 3600)  # per-check telemetry for the bench (no text)
 
 
+VERSE_LIKE_RAW = 90.0  # D-23: an Arabic quote this close to a verse never falls through to the hadith path
+
+
 class InputTooLong(Exception):
     pass
 
@@ -153,12 +156,18 @@ async def decide_quran(i: int, c: ExtractedClaim, msg_lang: str, trace: ClaimTra
                 matched = [by_id[x] for x in res.match_ids]
                 best = vm.best if vm.best and vm.best.verses in matched else None
                 ev = verse_evidence(index, matched, lang, best)
-                if res.relation == "altered":
+                # D-23: the verifier only confirms WHICH verse it is. When the deterministic word diff found
+                # changed / missing / added words, the verdict is misquoted whatever relation the model says
+                # (deterministic before LLM; a missed spelling variant errs towards misquoted, never verified).
+                if (vm.status == "misquoted_candidate" and best is not None and best.ops) or res.relation == "altered":
                     return R.ClaimResult(**base, verdict="misquoted", relation="altered", confidence=res.confidence,
                                          evidence=ev, diff=R.Diff(kind="wording", ops=_ops(best),
                                                                   details=res.altered_details))
                 return _with_cited_check(R.ClaimResult(**base, verdict="verified", relation=res.relation,
                                                        confidence=res.confidence, evidence=ev), vm.cited, index, matched)
+            if vm.best is not None and vm.best.raw >= VERSE_LIKE_RAW:
+                # clearly verse-like text the verifier would not confirm: abstain rather than call it a hadith
+                return R.ClaimResult(**base, verdict="not_found")
         return None
     # non-Arabic quote (B12)
     cands = await quran_match.match_translation(c.span, lang, c.ar_queries, index)

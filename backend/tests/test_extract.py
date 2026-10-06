@@ -166,3 +166,37 @@ def test_script_lang_distinguishes_urdu() -> None:
     assert ex.script_lang(hadith_ar()) == "ar"
     assert ex.script_lang(verse_en()) == "en"
     assert not ex.is_arabic(ur["result"]["translation"])
+
+
+def test_tighten_span_drops_lead_in_and_brackets() -> None:
+    h = hadith_ar()
+    msg = f"قال رسول الله ﷺ: «{h}» انتهى"
+    s, e = ex.tighten_span(msg, 0, len(msg) - len(" انتهى"))
+    assert msg[s:e] == h
+    v = verse_en()
+    msg2 = f"Allah says: {v}"
+    s, e = ex.tighten_span(msg2, 0, len(msg2))
+    assert msg2[s:e] == v
+
+
+async def test_llm_span_with_lead_in_is_tightened(monkeypatch: pytest.MonkeyPatch) -> None:
+    h = hadith_ar()
+    msg = f"قال رسول الله ﷺ: «{h}»"
+    out = Extraction(intent="claims", personal_ruling_request=False, claims=[
+        Claim(type="hadith", span=msg, lang="ar", claimed_source=None, ar_queries=[h]),
+    ])
+    monkeypatch.setattr(ex, "_llm_extract", fake_llm(out))
+    c = (await ex.extract(msg)).claims[0]
+    assert c.span == h and msg[c.span_start:c.span_end] == h
+
+
+async def test_explicit_trigger_overrides_attributed_saying(monkeypatch: pytest.MonkeyPatch) -> None:
+    ur = json.loads((FIXTURES_DIR / "quranenc" / "aya_urdu_junagarhi_2_255.json").read_text(encoding="utf-8"))
+    v = re.sub(r"\[\d+\]", "", ur["result"]["translation"]).split("۔")[0].strip()
+    msg = f"اللہ تعالیٰ فرماتا ہے: «{v}»"
+    out = Extraction(intent="claims", personal_ruling_request=False, claims=[
+        Claim(type="attributed_saying", span=msg, lang="ur", claimed_source=None, ar_queries=["الله"]),
+    ])
+    monkeypatch.setattr(ex, "_llm_extract", fake_llm(out))
+    c = (await ex.extract(msg)).claims[0]
+    assert c.type == "quran" and c.span == v and c.lang == "ur"
