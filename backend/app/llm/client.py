@@ -288,22 +288,32 @@ class LLMClient:
         )
 
     async def _call_once(self, system: str, user: str, schema_json: dict[str, Any], model: str) -> tuple[str, LLMUsage]:
+        """Fallback chain (D-15, D-18): primary model (one retry on timeout / 5xx), then each model in
+        LLM_FALLBACK_MODELS once (same provider; free-tier quotas and load are per model), then Groq once."""
+        s = self.settings
         try:
             return await with_retry(
                 lambda: self._call_primary(system, user, schema_json, model), retry_on=(_Transient,)
             )
-        except _Transient as e:
-            raise LLMTimeout(str(e)) from e
-        except _Quota as e:
-            if not self.settings.groq_api_key:
-                raise LLMQuotaExceeded(f"primary: {e}; no GROQ_API_KEY") from e
-            log.warning("llm_quota_fallback", extra={"from": self.settings.llm_provider, "to": "groq", "error": str(e)})
-        try:  # one retry on Groq
-            return await self._call_groq(system, user, schema_json)
-        except _Transient as e:
-            raise LLMTimeout(f"groq: {e}") from e
-        except _Quota as e:
-            raise LLMQuotaExceeded(f"groq: {e}") from e
+        except (_Transient, _Quota) as e:
+            last: Exception = e
+        for fb in s.llm_fallback_models_list:
+            if fb == model:
+                continue
+            log.warning("llm_fallback_model", extra={"model": model, "to": fb, "error": str(last)})
+            try:
+                return await self._call_primary(system, user, schema_json, fb)
+            except (_Transient, _Quota) as e:
+                last = e
+        if s.groq_api_key:
+            log.warning("llm_fallback_groq", extra={"from": s.llm_provider, "error": str(last)})
+            try:
+                return await self._call_groq(system, user, schema_json)
+            except (_Transient, _Quota) as e:
+                last = e
+        if isinstance(last, _Quota):
+            raise LLMQuotaExceeded(str(last)) from last
+        raise LLMTimeout(str(last)) from last
 
     # -- public
 

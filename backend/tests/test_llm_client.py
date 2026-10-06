@@ -234,3 +234,32 @@ async def test_primary_success_is_labelled_gemini() -> None:
     )
     _, usage = await LLMClient(gemini_settings()).complete_json("echo", {"text": "hi"}, Echo, "gemini-x")
     assert usage.providers == {"gemini": 2}  # both attempts counted
+
+
+@respx.mock
+async def test_primary_unavailable_after_retry_falls_back_to_groq() -> None:  # D-18
+    primary = respx.post(GEMINI + "/chat/completions").mock(return_value=httpx.Response(503, json={}))
+    groq = respx.post(GROQ + "/chat/completions").mock(
+        return_value=httpx.Response(200, json=oa_body('{"answer": "g", "score": 1}'))
+    )
+    _, usage = await LLMClient(gemini_settings()).complete_json("echo", {"text": "hi"}, Echo, "gemini-x")
+    assert primary.call_count == 2 and groq.call_count == 1 and usage.providers == {"groq": 1}
+
+
+@respx.mock
+async def test_fallback_models_tried_before_groq() -> None:  # D-18
+    def by_model(request: httpx.Request) -> httpx.Response:
+        model = json.loads(request.content)["model"]
+        if model == "gemini-x":
+            return httpx.Response(503, json={})
+        if model == "gemini-b":
+            return httpx.Response(429, json={})
+        return httpx.Response(200, json=oa_body('{"answer": "' + model + '", "score": 1}'))
+
+    primary = respx.post(GEMINI + "/chat/completions").mock(side_effect=by_model)
+    groq = respx.post(GROQ + "/chat/completions").mock(return_value=httpx.Response(200, json=oa_body("{}")))
+    s = gemini_settings()
+    s.llm_fallback_models = "gemini-b, gemini-c"
+    out, usage = await LLMClient(s).complete_json("echo", {"text": "hi"}, Echo, "gemini-x")
+    assert out.answer == "gemini-c" and groq.call_count == 0
+    assert [json.loads(c.request.content)["model"] for c in primary.calls] == ["gemini-x", "gemini-x", "gemini-b", "gemini-c"]

@@ -39,6 +39,7 @@ class Settings(BaseSettings):
     llm_effort: str = "low"  # anthropic output_config.effort; empty = omit (e.g. Haiku 4.5)
     llm_anthropic_fallbacks: bool = True  # server-side refusal fallback on models that support it
     llm_reasoning_effort: str = ""  # openai_compatible `reasoning_effort` (e.g. Gemini: none|low|medium|high)
+    llm_fallback_models: str = ""  # comma-separated, same provider, tried once each before Groq (D-18)
 
     # Fallback LLM on quota / rate-limit errors from the primary (DECISIONS D-15)
     groq_api_key: str = ""
@@ -79,6 +80,10 @@ class Settings(BaseSettings):
     result_ttl_hours: int = 24
 
     log_level: str = "INFO"
+
+    @property
+    def llm_fallback_models_list(self) -> list[str]:
+        return [m.strip() for m in self.llm_fallback_models.split(",") if m.strip()]
 
     @property
     def allowed_origins_list(self) -> list[str]:

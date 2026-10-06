@@ -302,7 +302,7 @@ For each claim:
 - lang: ISO 639-1 code of the span
 - claimed_source: the source stated in the message, else null
   (e.g. "Bukhari", "Muslim", "Al-Baqarah 255", "Surah 2:255", "سورة البقرة")
-- ar_queries: 2-3 short Arabic phrases (4-8 words, no diacritics) that would appear in the
+- ar_queries: 2-3 short Arabic phrases in Arabic script, never transliterated (4-8 words, no diacritics) that would appear in the
   ORIGINAL Arabic text of THIS quote.
   If the span is Arabic, take phrases directly from it.
   If the span is not Arabic, translate it LITERALLY, word by word.
