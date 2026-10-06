@@ -63,7 +63,9 @@ def _match_name(text: str) -> int | None:
             return en[hit[0]]
     arabic = _AR_NOISE.sub(" ", normalize_ar(text))
     folded = _fold_ar(arabic)
-    if len(folded) >= 2:
+    if folded in ar:  # exact name first: one- or two-letter names (ص, ق, طه, يس) cannot be fuzzy-matched
+        return ar[folded]
+    if len(folded) >= 3:
         hit = process.extractOne(folded, list(ar), scorer=fuzz.ratio, score_cutoff=NAME_MIN_SCORE)
         if hit:
             return ar[hit[0]]
