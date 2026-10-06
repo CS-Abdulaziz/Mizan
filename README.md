@@ -2,6 +2,38 @@
 
 Multilingual Islamic quotation verifier. The frontend treats the verification backend as a REST service.
 
+## What Mizan does
+
+Forward or paste any message in Arabic, English or Urdu. Mizan finds every quoted Quran verse and hadith, checks
+each one against approved sources (the King Fahd Complex Mushaf, QuranEnc, HadeethEnc, Dorar.net), and returns a
+sourced verdict per quote: **verified**, **misquoted** (with the exact word differences or the correct
+surah:ayah), **not established** (all scholars' gradings shown verbatim), **disputed**, **needs review** or
+**not found**, plus a polite ready-to-send reply. It never issues fatwas; personal questions are referred to
+qualified scholars.
+
+**Deterministic before LLM.** Verse matching, grade classification and verdicts are code; the language model only
+extracts quotes, picks among candidate source ids, and phrases the reply. Every text, grading, book and link shown
+is copied from the sources.
+
+```mermaid
+flowchart LR
+    M[Message] --> X[Extract quotes: LLM + rules]
+    X --> Q[Verse matcher: Mushaf, both spellings]
+    X --> H[Hadith retrieval: Dorar + HadeethEnc]
+    Q --> V[Verifier: picks among source ids]
+    H --> V
+    V --> D[Decision engine: grade rules + verdict table]
+    D --> C[Verdict cards + ready reply]
+```
+
+Details: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) · Evaluation: [docs/EVALUATION.md](docs/EVALUATION.md) ·
+Content policy: [docs/CONTENT_POLICY.md](docs/CONTENT_POLICY.md) · Sources: [docs/SOURCES.md](docs/SOURCES.md),
+[docs/LICENSES.md](docs/LICENSES.md) · Decisions: [docs/DECISIONS.md](docs/DECISIONS.md)
+
+## Results (Mizan-Bench)
+
+_Filled in after the frozen-threshold test runs (task B20); see docs/EVALUATION.md._
+
 ## Frontend demo
 
 ```sh
