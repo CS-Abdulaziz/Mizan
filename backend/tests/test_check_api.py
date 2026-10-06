@@ -210,3 +210,15 @@ async def test_d24_one_word_swapped_is_misquoted_even_if_verifier_says_different
     out = await orchestrator.decide_quran(0, c, "ar", orchestrator.ClaimTrace())
     assert out.verdict == "misquoted" and [(o.op, o.quoted) for o in out.diff.ops] == [("replace", "حاسوب")]
     assert [(x.surah, x.ayah) for x in out.evidence.locations] == [(2, 255)]
+
+
+@needs_quran
+def test_examples_endpoint_builds_inputs_from_sources(client: TestClient) -> None:
+    from app.api import examples as ex_api
+
+    quran_match._index = quran_match.load_from_json()
+    ex_api._cache = None
+    body = client.get("/api/v1/examples").json()
+    ids = [e["id"] for e in body["examples"]]
+    assert "ar" in ids and all(e["text"] and e["label"] for e in body["examples"])
+    assert ex_api.PLAIN_WORD in next(e for e in body["examples"] if e["id"] == "ar")["text"]

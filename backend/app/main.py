@@ -10,7 +10,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import check, feedback, file_report, health, reply, sources, telegram
+from app.api import check, examples, feedback, file_report, health, reply, sources, telegram
 from app.core.config import get_settings
 from app.core.logging import get_logger, setup_logging
 from app.db import queries, session
@@ -77,6 +77,7 @@ def create_app() -> FastAPI:
     app.include_router(feedback.router)
     app.include_router(telegram.router)
     app.include_router(file_report.router)
+    app.include_router(examples.router)
     return app
 
 

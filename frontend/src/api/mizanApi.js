@@ -1,11 +1,8 @@
 import { normalizeResult, checkRequest } from "./adapter.js";
-import {
-  mockCheck,
-  mockReply,
-  fixture,
-  scenarios,
-} from "../mocks/responses.js";
 export const USE_MOCK = import.meta.env.VITE_USE_MOCK_API !== "false";
+// Mocks are loaded only in mock mode, so they never ship in the production bundle.
+export const loadMocks = () =>
+  USE_MOCK ? import("../mocks/responses.js") : Promise.resolve(null);
 export const FEATURES = {
   reply: import.meta.env.VITE_ENABLE_REPLY !== "false",
   feedback: import.meta.env.VITE_ENABLE_FEEDBACK === "true",
@@ -27,6 +24,7 @@ const paths = {
   reply: "/api/v1/reply",
   feedback: "/api/v1/feedback",
   sources: "/api/v1/sources",
+  examples: "/api/v1/examples",
 };
 export const errorMessages = {
   network: "تعذر الاتصال بالخدمة. تأكد من اتصالك ثم حاول مرة أخرى.",
@@ -96,13 +94,14 @@ export async function checkText(text, { scenario, signal } = {}) {
   if (!text.trim()) throw new Error("invalid_input");
   if (Array.from(text).length > 4000) throw new Error("too_long");
   const data = USE_MOCK
-    ? await mockCheck(text, scenario, signal)
+    ? await (await loadMocks()).mockCheck(text, scenario, signal)
     : await request(paths.check, { body: checkRequest(text), signal });
   return normalizeResult(data);
 }
 export async function getResult(id, { signal } = {}) {
   if (!USE_MOCK)
     return normalizeResult(await request(paths.result(id), { signal }));
+  const { scenarios, fixture } = await loadMocks();
   const key = id.replace(/^demo-/, "");
   if (
     !id.startsWith("demo-") ||
@@ -113,7 +112,7 @@ export async function getResult(id, { signal } = {}) {
   return normalizeResult(fixture(key));
 }
 export async function generateReply(result) {
-  if (USE_MOCK) return mockReply(result);
+  if (USE_MOCK) return (await loadMocks()).mockReply(result);
   const data = await request(paths.reply, {
     body: { check_id: result.check_id, lang: result.lang },
   });
@@ -129,4 +128,9 @@ export async function submitFeedback(body) {
 }
 export function getSources() {
   return request(paths.sources);
+}
+export async function getExamples() {
+  if (USE_MOCK) return (await loadMocks()).examples;
+  const data = await request(paths.examples);
+  return Array.isArray(data?.examples) ? data.examples : [];
 }

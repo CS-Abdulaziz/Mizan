@@ -66,3 +66,19 @@ services:
         value: "4000"
       - key: RESULT_TTL_HOURS
         value: "24"
+
+  # Web app (frontend/), static site. staticPublishPath is relative to rootDir (Render monorepo docs).
+  - type: web
+    name: mizan-web
+    runtime: static
+    rootDir: frontend
+    buildCommand: npm ci && npm run build
+    staticPublishPath: ./dist
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+    routes:
+      - type: rewrite        # client-side routes such as /r/<check_id>
+        source: /*
+        destination: /index.html

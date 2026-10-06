@@ -1,14 +1,18 @@
 import ar from "./fixtures/hadith-ar.json";
 import en from "./fixtures/hadith-en.json";
 import ur from "./fixtures/hadith-ur.json";
-import quran from "./fixtures/quran.json";
+// Placeholder only: mock fixtures never contain scripture (texts come from the sources at run time).
+const quran = {
+  arabic_text: "<نص من المصدر> (آية)",
+  url: "https://quranenc.com/en/browse/english_rwwad/94/5",
+};
 import dorar from "./fixtures/dorar.json";
 
 export const examples = [
   {
     id: "china",
     label: "حديث متداول",
-    text: "قال رسول الله ﷺ: اطلبوا العلم ولو بالصين",
+    text: "قال رسول الله ﷺ: <نص من المصدر> (حديث لا يثبت)",
   },
   { id: "quran", label: "آية منقولة", text: quran.arabic_text },
   { id: "english", label: "English example", text: en.title },

@@ -74,7 +74,7 @@ class Settings(BaseSettings):
 
     # Web
     public_web_url: str = ""
-    allowed_origins: str = "http://localhost:5173"  # comma-separated
+    allowed_origins: str = "http://localhost:5173,http://127.0.0.1:5173,http://127.0.0.1:4173"  # comma-separated
 
     # Limits
     max_input_chars: int = 4000

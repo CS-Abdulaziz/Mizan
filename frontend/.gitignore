@@ -4,3 +4,5 @@ dist/
 .env.*
 !.env.example
 test-results/
+!.env.production
+!.env.example

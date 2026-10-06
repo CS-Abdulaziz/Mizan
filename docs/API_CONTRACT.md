@@ -180,3 +180,8 @@ chunks of at most 4,000 characters; up to 10 chunks are checked (`truncated: tru
 
 Errors: `413` file too large · `415` unsupported type · `422` empty file · `429` rate limited · `503` unavailable.
 Each chunk's full result is available at `GET /api/v1/check/{check_id}` for 24 h.
+
+## GET /api/v1/examples  (added 2026-10-06; additive)
+
+Demo inputs for the web app's "try an example" buttons, built on the server from source data (no scripture in the
+frontend): `{ "examples": [ { "id": "ar", "label": "<button label>", "lang": "ar", "text": "<message>" } ] }`.

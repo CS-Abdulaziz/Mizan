@@ -1,6 +1,11 @@
 import { useEffect, useRef, useState } from "react";
-import { checkText, humanError, USE_MOCK } from "../api/mizanApi.js";
-import { examples, scenarios, scenarioText } from "../mocks/responses.js";
+import {
+  checkText,
+  getExamples,
+  humanError,
+  loadMocks,
+  USE_MOCK,
+} from "../api/mizanApi.js";
 import Results from "../components/Results.jsx";
 
 export default function Home() {
@@ -13,8 +18,16 @@ export default function Home() {
   const controller = useRef(null),
     input = useRef(null),
     retryText = useRef("");
+  const [examples, setExamples] = useState([]),
+    [demo, setDemo] = useState(null);
   const count = Array.from(text).length;
   useEffect(() => () => controller.current?.abort(), []);
+  useEffect(() => {
+    getExamples().then(setExamples).catch(() => setExamples([]));
+    loadMocks().then(setDemo);
+  }, []);
+  const scenarios = demo?.scenarios || [],
+    scenarioText = (id) => demo?.scenarioText(id) || "";
   function fill(value, id = "") {
     setText(value);
     setScenario(id);
