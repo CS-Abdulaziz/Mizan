@@ -263,3 +263,32 @@ async def test_fallback_models_tried_before_groq() -> None:  # D-18
     out, usage = await LLMClient(s).complete_json("echo", {"text": "hi"}, Echo, "gemini-x")
     assert out.answer == "gemini-c" and groq.call_count == 0
     assert [json.loads(c.request.content)["model"] for c in primary.calls] == ["gemini-x", "gemini-x", "gemini-b", "gemini-c"]
+
+
+@respx.mock
+async def test_400_with_reasoning_effort_retried_without_it() -> None:
+    def by_body(request: httpx.Request) -> httpx.Response:
+        if "reasoning_effort" in json.loads(request.content):
+            return httpx.Response(400, json=[{"error": {"status": "INVALID_ARGUMENT"}}])
+        return httpx.Response(200, json=oa_body('{"answer": "ok", "score": 1}'))
+
+    route = respx.post(GEMINI + "/chat/completions").mock(side_effect=by_body)
+    s = gemini_settings(groq_key="")
+    s.llm_reasoning_effort = "none"
+    out, _ = await LLMClient(s).complete_json("echo", {"text": "hi"}, Echo, "gemini-x")
+    assert out.answer == "ok" and route.call_count == 2
+
+
+@respx.mock
+async def test_fallback_model_error_moves_chain_to_groq() -> None:
+    def by_model(request: httpx.Request) -> httpx.Response:
+        model = json.loads(request.content)["model"]
+        return httpx.Response(429 if model == "gemini-x" else 404, json={})
+
+    respx.post(GEMINI + "/chat/completions").mock(side_effect=by_model)
+    groq = respx.post(GROQ + "/chat/completions").mock(
+        return_value=httpx.Response(200, json=oa_body('{"answer": "g", "score": 1}')))
+    s = gemini_settings()
+    s.llm_fallback_models = "gemini-gone"
+    out, usage = await LLMClient(s).complete_json("echo", {"text": "hi"}, Echo, "gemini-x")
+    assert out.answer == "g" and groq.call_count == 1 and usage.providers == {"groq": 1}

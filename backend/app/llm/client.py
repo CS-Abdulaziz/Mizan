@@ -258,6 +258,10 @@ class LLMClient:
             raise _Quota(f"http_{r.status_code}")
         if r.status_code >= 500:
             raise _Transient(f"http_{r.status_code}")
+        if r.status_code == 400 and reasoning_effort:
+            # some models reject a reasoning_effort value (e.g. "none" on gemini-3.5-flash-lite): retry without it
+            return await self._call_openai_compatible(system, user, schema_json, model, base_url=base_url,
+                                                      api_key=api_key, reasoning_effort="")
         if r.status_code >= 400:
             raise LLMError(f"{provider_label(base_url)} http {r.status_code}")
         body = r.json()
@@ -297,22 +301,28 @@ class LLMClient:
             )
         except (_Transient, _Quota) as e:
             last: Exception = e
+        except LLMError as e:
+            if not (s.llm_fallback_models_list or s.groq_api_key):
+                raise
+            last = e
         for fb in s.llm_fallback_models_list:
             if fb == model:
                 continue
             log.warning("llm_fallback_model", extra={"model": model, "to": fb, "error": str(last)})
             try:
                 return await self._call_primary(system, user, schema_json, fb)
-            except (_Transient, _Quota) as e:
+            except (_Transient, _Quota, LLMError) as e:  # a fallback model's own error moves the chain on
                 last = e
         if s.groq_api_key:
             log.warning("llm_fallback_groq", extra={"from": s.llm_provider, "error": str(last)})
             try:
                 return await self._call_groq(system, user, schema_json)
-            except (_Transient, _Quota) as e:
+            except (_Transient, _Quota, LLMError) as e:
                 last = e
         if isinstance(last, _Quota):
             raise LLMQuotaExceeded(str(last)) from last
+        if isinstance(last, LLMError):
+            raise last
         raise LLMTimeout(str(last)) from last
 
     # -- public
