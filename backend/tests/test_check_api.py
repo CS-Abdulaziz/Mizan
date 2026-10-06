@@ -188,3 +188,25 @@ async def test_d23_dropped_word_is_misquoted_even_if_verifier_says_same_meaning(
     out = await orchestrator.decide_quran(0, c, "ar", orchestrator.ClaimTrace())
     assert out.verdict == "misquoted" and out.diff.kind == "wording"
     assert any(o.op == "delete" and o.source == words[12] for o in out.diff.ops)
+
+
+@needs_quran
+async def test_d24_one_word_swapped_is_misquoted_even_if_verifier_says_different(monkeypatch: pytest.MonkeyPatch) -> None:
+    from app.pipeline.extract import ExtractedClaim
+
+    index = quran_match.load_from_json()
+    quran_match._index = index
+    words = tokens(index.verses[index.by_ref[(2, 255)]].imlaei_clean)
+    q = list(words[:20])
+    q[8] = "حاسوب"
+    quote = " ".join(q)
+
+    async def fake_verify(prompt_name, variables, schema, model):
+        return vf.VerifyOut(match_ids=[], relation="different", confidence=0.9), LLMUsage()
+
+    monkeypatch.setattr(vf, "complete_json", fake_verify)
+    c = ExtractedClaim(type="quran", span=quote, span_start=0, span_end=len(quote), lang="ar", claimed_source=None,
+                       ar_queries=[quote])
+    out = await orchestrator.decide_quran(0, c, "ar", orchestrator.ClaimTrace())
+    assert out.verdict == "misquoted" and [(o.op, o.quoted) for o in out.diff.ops] == [("replace", "حاسوب")]
+    assert [(x.surah, x.ayah) for x in out.evidence.locations] == [(2, 255)]

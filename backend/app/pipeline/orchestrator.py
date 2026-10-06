@@ -34,6 +34,7 @@ _metrics: TTLCache[dict] = TTLCache(2048, 24 * 3600)  # per-check telemetry for 
 
 
 VERSE_LIKE_RAW = 90.0  # D-23: an Arabic quote this close to a verse never falls through to the hadith path
+MAX_DETERMINISTIC_OPS = 3  # D-24: at most this many word-level changes for a deterministic misquoted verdict
 
 
 class InputTooLong(Exception):
@@ -165,7 +166,15 @@ async def decide_quran(i: int, c: ExtractedClaim, msg_lang: str, trace: ClaimTra
                                                                   details=res.altered_details))
                 return _with_cited_check(R.ClaimResult(**base, verdict="verified", relation=res.relation,
                                                        confidence=res.confidence, evidence=ev), vm.cited, index, matched)
-            if vm.best is not None and vm.best.raw >= VERSE_LIKE_RAW:
+            best = vm.best
+            if (vm.status == "misquoted_candidate" and best is not None and best.raw >= VERSE_LIKE_RAW
+                    and 0 < len(best.ops) <= MAX_DETERMINISTIC_OPS):
+                # D-24: no verse matches exactly, and the quote aligns at >= 90 with ONE verse except for a few
+                # words: that verse, altered. Deterministic evidence; the model's non-confirmation does not undo it.
+                ev = verse_evidence(index, [best.verses], lang, best)
+                return R.ClaimResult(**base, verdict="misquoted", relation="altered", confidence=round(best.raw / 100, 2),
+                                     evidence=ev, diff=R.Diff(kind="wording", ops=_ops(best)))
+            if best is not None and best.raw >= VERSE_LIKE_RAW:
                 # clearly verse-like text the verifier would not confirm: abstain rather than call it a hadith
                 return R.ClaimResult(**base, verdict="not_found")
         return None
