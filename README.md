@@ -32,15 +32,16 @@ Content policy: [docs/CONTENT_POLICY.md](docs/CONTENT_POLICY.md) · Sources: [do
 
 ## Results (Mizan-Bench)
 
-Test split (125 items, thresholds frozen on the dev split first; partial run 109/125, 0 items sharia-reviewed yet):
+Test split (125 items; thresholds frozen on the dev split first; all items still awaiting sharia review):
 
-| | Mizan | Dorar search as-is | LLM alone (dev split) |
+| | Mizan | LLM alone | Dorar search as-is |
 |---|---|---|---|
-| Verdict accuracy | **99.1%** | 49.6% | 22.2% |
-| False-verified (fake / altered text labelled authentic) | **0%** | 15.4% | 0% |
-| Not-established recall | 96.2% | 80.8% | 0% |
+| **False-verified** (fake / altered text labelled authentic) | **0%** | 30.4% | 15.4% |
+| Verdict accuracy | **99.2%** | 78.7% (answered 89/125, quota) | 49.6% |
+| Not-established recall | 96.2% | 50.0% | 80.8% |
 
-Free tiers only; latency p50 10 s. Full method, limits and incomplete runs: [docs/EVALUATION.md](docs/EVALUATION.md).
+One run per system (consistency not measured); free tiers only; Mizan latency p50 9.9 s. Method, gaps and limits:
+[docs/EVALUATION.md](docs/EVALUATION.md).
 
 ## Frontend demo
 

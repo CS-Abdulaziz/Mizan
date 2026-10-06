@@ -32,30 +32,32 @@ provider mix is recorded per check. Embeddings were limited to ~1,000 texts/day 
 mostly unavailable during the runs; results reflect the lexical + Dorar paths. Items whose LLM calls failed on
 every provider were re-run after the quota window and never scored as failures.
 
-## Results (test split)
+## Results (test split, 125 items)
 
-| Metric | mizan | dorar_direct | llm_baseline |
+**False-verified rate (fabricated, altered or misattributed text labelled authentic): Mizan 0.0% (0/39) vs
+LLM alone 30.4% (7/23 answered) vs Dorar searched as-is 15.4% (6/39).**
+
+| Metric | mizan | llm_baseline | dorar_direct |
 |---|---|---|---|
-| Items answered (of 125) | **109 (run in progress)** | 125 | not run on test (quota; dev only) |
-| Verdict accuracy | **99.1%** (108/109) | 49.6% (62/125) | dev: 22.2% (12/54) |
-| Not-established recall | 96.2% (25/26) | 80.8% (21/26) | dev: 0.0% (0/10) |
-| False-verified rate (target 0) | **0.0%** (0/39) | 15.4% (6/39) | dev: 0.0% (0/16) |
-| Hallucination flags (automatic check) | 5/104, all check artifacts (see below) | n/a | dev: 0/23 |
-| Abstention / referral correctness | 100% (4/4) | 0% (0/20) | dev: 66.7% (6/9) |
-| Consistency (3 runs) | not measured: 1 run (D-25) | 1 run | - |
-| Latency p50 / p95 | 10.4 s / 18.8 s | 1.9 s / 2.8 s | dev: 3.0 s / 4.3 s |
+| False-verified rate (target 0) | **0.0%** (0/39) | 30.4% (7/23) | 15.4% (6/39) |
+| Verdict accuracy | **99.2%** (124/125) | 78.7% (70/89) | 49.6% (62/125) |
+| Not-established recall | 96.2% (25/26) | 50.0% (5/10) | 80.8% (21/26) |
+| Hallucination flags (automatic check) | 5/104 (manual check pending) | 4/83 | n/a |
+| Abstention / referral correctness | 100% (20/20) | n/a (not answered) | 0% (0/20) |
+| Latency p50 / p95 | 9.9 s / 18.5 s | 5.3 s / 7.8 s | 1.9 s / 2.8 s |
 | Mean cost per check | $0 (free tiers) | $0 | $0 |
+| Items answered | 125 | **89** | 125 |
 
-Reviewed items: 0 of 179 (sharia review pending; all results are on unreviewed items).
-**Incomplete:** Mizan test run 109/125 at the time of writing (the remaining 16 items continue in the background;
-`python bench/metrics.py --split test` regenerates `bench/results/report.md`). `llm_baseline` was run on dev only:
-Gemini Flash daily quotas were exhausted (D-25). Test numbers are for the code at tag `thresholds-frozen`; the later
-fix D-27 (evidence-request detector) is not reflected. Per-category and per-language tables: `bench/results/report.md`.
-
-Hallucination flags: the 5 flagged Mizan outputs are all `fabricated_translated_with_authentic_lookalike` items
-(English quotes) answered correctly `not_established`, with the Arabic text and link copied from Dorar; the
-automatic check has no Arabic source text for Dorar references to compare with, so it flags them. No invented text,
-id, grade or link was found.
+- **llm_baseline answered 89/125** because the free-tier model quotas ran out (D-25). Missing: all
+  `reference_pack_questions` (14/14), `personal_ruling` (6/6), `fabricated_translated_with_authentic_lookalike` (5/5)
+  and `prophetic_attribution_no_basis` (1/1), and 10/20 `fabricated_hadith`. Its numbers are over the items it
+  answered, which under-represent the hardest categories.
+- **Consistency was not measured**: one run per system (D-25), not the planned three.
+- **All 179 bench items are unreviewed** (sharia review pending, D-22); every number above is on unreviewed items.
+- Test numbers are for the code at tag `thresholds-frozen`; the later fix D-27 (evidence-request detector) is not
+  reflected. Per-category and per-language tables and the chart: `bench/results/report.md`.
+- Hallucination flags: the automatic check (§11.4) flagged 5 Mizan outputs; they are being checked by hand and the
+  numbers stay as computed until then.
 
 ## Limitations per language
 
