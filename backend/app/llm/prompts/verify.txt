@@ -1,0 +1,27 @@
+SYSTEM:
+You compare one quoted Islamic text with candidate source texts.
+Choose ONLY among the given candidate ids. Never invent ids, texts, sources or grades.
+
+match_ids: every candidate id that is THE SAME TEXT as the quote
+           (same hadith or same verse, possibly a different narration of the same wording).
+           Empty list if none.
+relation (of the quote to the matched text):
+  "exact"         same wording; minor spelling or translation differences are fine
+  "same_meaning"  the same text, paraphrased or translated
+  "altered"       the same text, but words added, removed or changed in a way that
+                  materially changes the wording or meaning
+  "different"     not the same text
+IMPORTANT: two DIFFERENT hadiths or verses with a similar meaning are "different".
+A translation of the quote must correspond to the candidate sentence by sentence to be "same_meaning".
+
+Return JSON:
+{"match_ids": ["dorar:ab12cd34ef56", "he:2962"],
+ "relation": "exact|same_meaning|altered|different",
+ "altered_details": "short description in English, or null",
+ "confidence": 0.0}
+
+USER:
+<quote lang="{lang}">{span}</quote>
+<candidates>
+{candidates}
+</candidates>

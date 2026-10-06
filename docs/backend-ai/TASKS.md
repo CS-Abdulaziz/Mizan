@@ -166,7 +166,7 @@ AC:
 - Fixture test: Dorar fixture with several chains of one matn → one group carrying all gradings.
 - If Dorar raises `SourceUnavailable`, paths B/C still run and `source_status = "source_unavailable"` is set.
 
-### [ ] B14 · Verifier (P0) — AMENDMENT 2, 3
+### [x] B14 · Verifier (P0) — AMENDMENT 2, 3
 Depends on: B03
 Build: `prompts/verify.txt` and `pipeline/verify.py` as §7.5: multi `match_ids`, ID validation in code,
 hallucination logging, per-type confidence thresholds (hadith `same_meaning` ≥ 0.85).
