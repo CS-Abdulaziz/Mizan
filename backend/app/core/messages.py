@@ -39,3 +39,68 @@ PRIVACY: dict[Lang, str] = {
 
 def localized(table: dict[Lang, str], lang: str | None) -> str:
     return table.get(lang or "ar", table["ar"])
+
+# SPEC §8.4 message-level statuses.
+NO_CLAIMS: dict[Lang, str] = {
+    "ar": (
+        "يتحقق ميزان من الآيات والأحاديث المنقولة في النص، ولم يجد في رسالتك آية أو حديثًا منسوبًا. "
+        "للأسئلة العامة عن الإسلام راجع: byenah.com و islamhouse.com"
+    ),
+    "en": (
+        "Mizan checks quoted verses and hadiths, and found none in your message. "
+        "For general questions about Islam, see byenah.com and islamhouse.com."
+    ),
+    "ur": (
+        "میزان پیغام میں نقل کی گئی آیات اور احادیث کی جانچ کرتا ہے، آپ کے پیغام میں کوئی آیت یا حدیث نہیں ملی۔ "
+        "اسلام کے بارے میں عمومی سوالات کے لیے byenah.com اور islamhouse.com دیکھیں۔"
+    ),
+}
+
+EVIDENCE_REQUEST: dict[Lang, str] = {
+    "ar": (
+        "ميزان لا يبحث عن أدلة ولا يقترح نصوصًا؛ هو يتحقق من نص منقول تُرسله إليه. "
+        "لم نجد دليلًا مطابقًا يمكن تقديمه من المصادر المتاحة. للسؤال عن دليل مسألة ما، راجع أهل العلم المختصين."
+    ),
+    "en": (
+        "Mizan does not search for or supply evidence; it verifies a quote you send it. "
+        "We have no matching evidence to offer from the available sources. To ask for the evidence on an issue, "
+        "please consult a qualified scholar."
+    ),
+    "ur": (
+        "میزان دلائل تلاش یا فراہم نہیں کرتا؛ یہ آپ کے بھیجے ہوئے اقتباس کی جانچ کرتا ہے۔ "
+        "دستیاب ذرائع سے پیش کرنے کے لیے کوئی مطابق دلیل نہیں ملی۔ کسی مسئلے کی دلیل کے لیے مستند اہلِ علم سے رجوع کریں۔"
+    ),
+}
+
+REFERRAL: dict[Lang, str] = {
+    "ar": (
+        "ميزان أداة للتحقق من المصادر وليس جهة فتوى. لسؤالك عن حالتك الخاصة، راجع جهة إفتاء معتمدة أو عالمًا مؤهلًا "
+        "في بلدك."
+    ),
+    "en": (
+        "Mizan is a source-verification tool, not a fatwa service. For a ruling on your own situation, please "
+        "consult a recognized fatwa authority or a qualified scholar in your country."
+    ),
+    "ur": (
+        "میزان ذرائع کی جانچ کا آلہ ہے، فتویٰ دینے والا ادارہ نہیں۔ اپنی ذاتی صورتِ حال کے بارے میں حکم کے لیے اپنے ملک کے کسی "
+        "معتبر دارالافتاء یا مستند عالم سے رجوع کریں۔"
+    ),
+}
+
+LIMITS: dict[Lang, list[str]] = {
+    "ar": [
+        "يتحقق ميزان من الآيات والأحاديث فقط، ولا يتحقق من الأقوال المنسوبة إلى العلماء والصحابة.",
+        "تعرض الأحكام كما وردت في المصادر دون ترجيح بين المحدّثين.",
+        "قد لا يجد ميزان نصًا موجودًا إذا اختلفت صياغته كثيرًا أو لم يرد في المصادر المتاحة.",
+    ],
+    "en": [
+        "Mizan checks verses and hadiths only; it does not verify sayings attributed to scholars or Companions.",
+        "Gradings are shown as given by the sources, without preferring one scholar over another.",
+        "Mizan may miss a text whose wording differs a lot, or that is not in the available sources.",
+    ],
+    "ur": [
+        "میزان صرف آیات اور احادیث کی جانچ کرتا ہے، علما اور صحابہ سے منسوب اقوال کی نہیں۔",
+        "احکام ذرائع کے مطابق بیان کیے جاتے ہیں، محدثین میں ترجیح کے بغیر۔",
+        "اگر الفاظ بہت مختلف ہوں یا متن دستیاب ذرائع میں نہ ہو تو میزان اسے نہیں پا سکتا۔",
+    ],
+}

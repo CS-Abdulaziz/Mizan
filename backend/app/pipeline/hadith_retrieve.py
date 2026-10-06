@@ -30,6 +30,8 @@ from app.sources.hadeethenc import hadith_url
 
 log = get_logger(__name__)
 
+BULK_LOAD_TIMEOUT_S = 120  # one-off startup loads of whole tables from a remote DB
+
 
 @dataclass
 class HadithCandidate:
@@ -97,9 +99,9 @@ async def load_hadeeth_index() -> HadeethIndex | None:
         from app.db.session import get_pool
 
         pool = await get_pool()
-        rows = [dict(r) for r in await pool.fetch("select id, text_ar, text_ar_clean, attribution, grade from hadiths")]
+        rows = [dict(r) for r in await pool.fetch("select id, text_ar, text_ar_clean, attribution, grade from hadiths", timeout=BULK_LOAD_TIMEOUT_S)]
         trs = [(r["hadith_id"], r["lang"], r["text"])
-               for r in await pool.fetch("select hadith_id, lang, text from hadith_translations")]
+               for r in await pool.fetch("select hadith_id, lang, text from hadith_translations", timeout=BULK_LOAD_TIMEOUT_S)]
     except Exception as e:  # noqa: BLE001
         log.warning("hadeeth_index_db_unavailable", extra={"error": type(e).__name__})
     if not rows:
@@ -291,3 +293,20 @@ async def retrieve(span: str, lang: str, ar_queries: list[str], *, dorar: DorarC
     top += [x for x in ranked if x not in top][: T.HADITH_VERIFIER_TOP - len(top)]
     top.sort(key=lambda x: (-x.score, -len(x.via)))
     return RetrievalResult(top, status, calls, embed_tokens)
+
+
+HE_LINK_MIN_RATIO = 92.0  # a Dorar matn found inside a HadeethEnc text at this similarity is the same hadith
+HE_LINK_MIN_WORDS = 5
+
+
+def hadeethenc_for_matn(text_clean: str, lang: str) -> HadithCandidate | None:
+    """Deterministically link a matched Dorar matn to the HadeethEnc entry with the same wording (if any),
+    so the card can show the approved translation and HadeethEnc's own link."""
+    ix = _hindex
+    if ix is None or len(text_clean.split()) < HE_LINK_MIN_WORDS:
+        return None
+    hit = process.extractOne(text_clean, ix.text_clean, scorer=fuzz.partial_ratio, score_cutoff=HE_LINK_MIN_RATIO)
+    if not hit:
+        return None
+    _, score, pos = hit
+    return _he_candidate(ix, pos, score, lang, "linked")

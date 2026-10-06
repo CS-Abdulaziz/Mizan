@@ -17,6 +17,8 @@ from app.core.logging import get_logger
 
 log = get_logger(__name__)
 
+BULK_LOAD_TIMEOUT_S = 120  # one-off startup loads of whole tables from a remote DB
+
 QURAN_JSON = DATA_DIR / "quran.json"
 WINDOW_SIZES = (1, 2, 3)
 
@@ -95,7 +97,8 @@ async def load_from_db() -> QuranIndex:
     pool = await get_pool()
     rows = await pool.fetch(
         "select id, surah, ayah, text_uthmani, text_clean, text_imlaei_clean, surah_name_ar, surah_name_en "
-        "from quran_verses order by id"
+        "from quran_verses order by id",
+        timeout=BULK_LOAD_TIMEOUT_S,
     )
     return QuranIndex(
         [
@@ -453,7 +456,7 @@ async def load_translations(index: QuranIndex | None = None) -> TranslationIndex
 
         pool = await get_pool()
         rows = [(r["verse_id"], r["lang"], r["tr_key"], r["text"])
-                for r in await pool.fetch("select verse_id, lang, tr_key, text from quran_translations")]
+                for r in await pool.fetch("select verse_id, lang, tr_key, text from quran_translations", timeout=BULK_LOAD_TIMEOUT_S)]
     except Exception as e:  # noqa: BLE001
         log.warning("translations_db_unavailable", extra={"error": type(e).__name__})
     if not rows:

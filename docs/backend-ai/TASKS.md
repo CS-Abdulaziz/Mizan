@@ -187,7 +187,7 @@ AC:
   attribution mismatch + source_unavailable never yields a positive verdict + each message status in §8.4.
 HUMAN: send `core/grade_rules.py` and the §8.2 table to the sharia reviewer; apply their edits.
 
-### [ ] B16 · Orchestrator + `/api/v1/check` (P0)
+### [x] B16 · Orchestrator + `/api/v1/check` (P0)
 Depends on: B10–B15
 Build: `pipeline/orchestrator.py` §7.7, `models/result.py` matching `docs/API_CONTRACT.md` exactly,
 `api/check.py`, `GET /api/v1/check/{id}`, `api/sources.py`, rate limit (`core/ratelimit.py`, 20/min/IP),
