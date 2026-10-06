@@ -33,7 +33,7 @@ needs_quran = pytest.mark.skipif(not quran_match.QURAN_JSON.exists(), reason="da
 def contract_examples() -> list[dict]:
     md = (REPO_ROOT / "docs" / "API_CONTRACT.md").read_text(encoding="utf-8")
     blocks = re.findall(r"```json\n(.*?)```", md, re.S)
-    return [json.loads(b) for b in blocks if '"check_id"' in b and '"status"' in b and '"claims"' in b]
+    return [json.loads(b) for b in blocks if '"check_id"' in b and '"disclaimer"' in b and '"claims"' in b]
 
 
 def test_contract_examples_validate_against_models() -> None:
