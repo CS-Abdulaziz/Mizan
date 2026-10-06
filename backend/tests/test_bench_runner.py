@@ -92,7 +92,24 @@ async def test_rate_limit_is_applied_per_item(tmp_path: Path) -> None:
     assert now[0] >= 120.0  # 5 items at 2 per minute -> at least two full windows of waiting
 
 
-async def test_unbuilt_system_reports_not_ready(tmp_path: Path) -> None:
+async def test_system_not_ready_stops_the_run(tmp_path: Path) -> None:
+    async def not_ready(item: dict) -> dict:
+        raise bench_run.SystemNotReady("x")
+
     with pytest.raises(bench_run.SystemNotReady):
-        await bench_run.run_one("llm_baseline", bench_run.system_llm_baseline, ITEMS, tmp_path / "x.jsonl",
-                                run=1, rpm=0)
+        await bench_run.run_one("fake", not_ready, ITEMS, tmp_path / "x.jsonl", run=1, rpm=0)
+
+
+def test_metrics_scoring() -> None:
+    import importlib.util as iu
+
+    sp = iu.spec_from_file_location("bench_metrics", REPO_ROOT / "bench" / "metrics.py")
+    m = iu.module_from_spec(sp)
+    sp.loader.exec_module(m)  # type: ignore[union-attr]
+    item = {"expected_status": "ok", "expected": [{"type": "hadith", "verdict": "not_established", "accept": ["not_found"]}]}
+    ok = {"output": {"status": "ok", "claims": [{"type": "hadith", "verdict": "not_found"}]}}
+    bad = {"output": {"status": "ok", "claims": [{"type": "hadith", "verdict": "verified"}]}}
+    assert m.score_item(item, ok)["correct"] and not m.score_item(item, bad)["correct"]
+    q = {"expected_status": "no_claims", "expected": []}
+    assert m.score_item(q, {"output": {"status": "no_claims", "claims": []}})["correct"]
+    assert not m.score_item(q, {"error": "x"})["answered"]

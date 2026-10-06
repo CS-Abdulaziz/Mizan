@@ -1,0 +1,7 @@
+{
+  "_note": "USD per million tokens. Mizan runs on free tiers (DECISIONS D-15): the billed cost is 0. Fill the paid list prices from ai.google.dev/pricing (Gemini Flash) and groq.com/pricing to report what the same traffic would cost on a paid tier.",
+  "default": {"input_per_mtok": 0.0, "output_per_mtok": 0.0},
+  "mizan": {"input_per_mtok": 0.0, "output_per_mtok": 0.0},
+  "llm_baseline": {"input_per_mtok": 0.0, "output_per_mtok": 0.0},
+  "dorar_direct": {"input_per_mtok": 0.0, "output_per_mtok": 0.0}
+}

@@ -30,6 +30,7 @@ DetectorFactory.seed = 0
 _cache: TTLCache[R.CheckResult] = TTLCache(256, 24 * 3600)
 _by_id: TTLCache[R.CheckResult] = TTLCache(1024, 24 * 3600)
 _pending: set[asyncio.Task] = set()
+_metrics: TTLCache[dict] = TTLCache(2048, 24 * 3600)  # per-check telemetry for the bench (no text)
 
 
 class InputTooLong(Exception):
@@ -288,6 +289,10 @@ def _cache_key(text: str, channel: str) -> str:
     return hashlib.sha1((" ".join(text.split()) + "|" + channel).encode("utf-8")).hexdigest()
 
 
+def metrics_for(check_id: str) -> dict | None:
+    return _metrics.get(check_id)
+
+
 def get_cached(check_id: str) -> R.CheckResult | None:
     return _by_id.get(check_id)
 
@@ -346,6 +351,9 @@ async def run_check(text: str, channel: str = "web", lang_hint: str | None = Non
                                   "verdicts": [c.verdict for c in claims], "providers": usage.providers})
     _cache.put(key, result)
     _by_id.put(check_id, result)
+    _metrics.put(check_id, {"latency_ms": latency_ms, "tokens_in": usage.input_tokens,
+                            "tokens_out": usage.output_tokens, "providers": usage.providers,
+                            "embed_tokens": sum(t.embed_tokens for t in traces)})
     task = asyncio.create_task(_persist(result, expires, channel, latency_ms, usage,
                                         sum(t.embed_tokens for t in traces)))
     _pending.add(task)  # keep a reference until done; storage must not delay the response

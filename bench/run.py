@@ -46,21 +46,77 @@ class SystemNotReady(Exception):
 # --------------------------------------------------------------------------- systems
 
 
+_ready = False
+
+
+async def _ensure_loaded() -> None:
+    """Load the in-memory indexes once (what the API lifespan does)."""
+    global _ready
+    if _ready:
+        return
+    from app.pipeline import hadith_retrieve, quran_match
+
+    index = await quran_match.load_index()
+    await quran_match.load_translations(index)
+    await hadith_retrieve.load_hadeeth_index()
+    _ready = True
+
+
 async def system_mizan(item: dict[str, Any]) -> dict[str, Any]:
     try:
-        from app.pipeline.orchestrator import run_check  # B16
+        from app.pipeline import orchestrator
     except ImportError as e:
         raise SystemNotReady("mizan: orchestrator not built yet (TASKS B16)") from e
-    result = await run_check(item["text"], channel="api")
-    return result.model_dump(mode="json") if hasattr(result, "model_dump") else result
+    await _ensure_loaded()
+    orchestrator._cache.clear()  # each run must really run (no LRU hits across runs)
+    result = await orchestrator.run_check(item["text"], channel="api")
+    out = result.model_dump(mode="json")
+    out["_metrics"] = orchestrator.metrics_for(result.check_id)
+    return out
 
 
 async def system_llm_baseline(item: dict[str, Any]) -> dict[str, Any]:
-    raise SystemNotReady("llm_baseline: built in TASKS B19 (SPEC §11.4)")
+    """Same LLM, no retrieval, forced to the same structured output (SPEC §11.4)."""
+    from pydantic import BaseModel, Field
+
+    from app.core.config import get_settings
+    from app.llm.client import get_llm_client
+
+    class BaseClaim(BaseModel):
+        type: str = "hadith"
+        span: str = ""
+        verdict: str = "not_found"
+        source_book: str | None = None
+        grade_text: str | None = None
+        arabic_text: str | None = None
+
+    class BaseOut(BaseModel):
+        status: str = "ok"
+        claims: list[BaseClaim] = Field(default_factory=list)
+
+    out, usage = await get_llm_client().complete_json(
+        "llm_baseline", {"text": item["text"]}, BaseOut, get_settings().llm_model_extract)
+    d = out.model_dump()
+    d["_metrics"] = {"tokens_in": usage.input_tokens, "tokens_out": usage.output_tokens, "providers": usage.providers}
+    return d
 
 
 async def system_dorar_direct(item: dict[str, Any]) -> dict[str, Any]:
-    raise SystemNotReady("dorar_direct: built in TASKS B19 (SPEC §11.4)")
+    """Dorar search with the message as-is: no extraction, no back-translation (SPEC §11.4)."""
+    from app.pipeline import grades
+    from app.pipeline.decide import GradeIn, hadith_verdict
+    from app.pipeline.hadith_retrieve import get_dorar, group_by_matn
+    from app.pipeline.normalize import normalize_ar
+
+    q = item["text"][:300]
+    results = await get_dorar().search(q)
+    if not results:
+        return {"status": "ok", "claims": [{"type": "hadith", "verdict": "not_found", "dorar_results": 0}]}
+    top = group_by_matn(results, [normalize_ar(q)])
+    best = max(top, key=lambda g: g.score)
+    v = hadith_verdict([GradeIn(grades.classify(m.book, m.grade_text), m.book) for m in best.members])
+    return {"status": "ok", "claims": [{"type": "hadith", "verdict": v or "needs_review", "dorar_results": len(results),
+                                        "books": [m.book for m in best.members], "id": best.id}]}
 
 
 SYSTEMS: dict[str, System] = {
