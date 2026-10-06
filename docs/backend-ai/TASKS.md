@@ -36,7 +36,13 @@ Exact steps for things only the human can do. Work continues on independent task
 
 ## Resume here
 
-Updated as tasks complete. Work is on `main` (stacked branches were squash-merged on 2026-10-06).
+Updated 2026-10-06 ~06:45 Riyadh. Everything is on `main` (stacked branches squash-merged).
+
+- **Done:** B01-B07, B09-B16, B18, B19 (code), B21-B23, B27. Supabase migrated + ingested (6,236 verses,
+  2 x 6,236 translations, 3,574 HadeethEnc hadiths). Live: 3 demo messages in 6.8 / 10.0 / 4.7 s.
+- **Waiting on human:** B08 (embedding quota, daily), B17 deploy,
+  B24 phone test, sharia review (D-20, D-22).
+- **In progress:** B20 (dev runs -> offline sweep -> freeze -> test runs), B25 (README results), B26 checklist.
 
 ---
 
@@ -96,7 +102,7 @@ HUMAN: choose providers and set `LLM_*` and `EMBEDDING_*` keys in `.env`.
 UPDATE 2026-10-05 (D-15, D-16): free tiers. Gemini (OpenAI-compatible) + Groq quota fallback, `gemini`
 embedding provider with L2 normalization and client-side rate limits; provider per call in `check_metrics`.
 
-### [ ] B04 · Database + migration (P0)
+### [x] B04 · Database + migration (P0)
 Depends on: B01
 Build: `db/migrations/001_init.sql` exactly as §5 (includes `check_results`, `match_verse`), `db/session.py`
 (async pool), `db/queries.py`. `/health` now runs `select 1` (§14, AMENDMENT 8). Background task deleting
