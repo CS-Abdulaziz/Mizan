@@ -145,7 +145,7 @@ AC:
 
 ## Phase C — Pipeline
 
-### [ ] B10 · Extraction + rule detector (P0)
+### [x] B10 · Extraction + rule detector (P0)
 Depends on: B03
 Build: `prompts/extract.txt` and schema exactly as §7.2 (AMENDMENT 3, 7), `pipeline/extract.py`,
 `pipeline/rules_detect.py` (trigger list in §7.2), merge logic, span-substring validation, cap 10 claims.

@@ -48,3 +48,30 @@ async def test_live_extraction_finds_both_quotes() -> None:
     assert types == ["hadith", "quran"]
     for c in out.claims:
         assert c.lang == "en" and c.ar_queries
+
+
+def three_messages() -> list[tuple[str, str]]:
+    """(lang, message) built from fixtures: en (hadith + verse), ar (hadith), ur (verse)."""
+    en, _, _ = build_message()
+    ar_body = json.loads(next((FIXTURES_DIR / "hadeethenc").glob("one_*_ar.json")).read_text(encoding="utf-8"))
+    ar_h = max(re.findall(r"[«\"]([^«»\"]+)[»\"]", ar_body["hadeeth"]), key=len).strip()
+    ar = f"أرسل لي أحدهم: قال رسول الله صلى الله عليه وسلم: «{ar_h}» هل هذا صحيح؟"
+    ur_body = json.loads((FIXTURES_DIR / "quranenc" / "aya_urdu_junagarhi_2_255.json").read_text(encoding="utf-8"))
+    ur_v = re.sub(r"\[\d+\]", "", ur_body["result"]["translation"]).split("۔")[0].strip()
+    ur = f"اللہ تعالیٰ فرماتا ہے: {ur_v}۔ کیا یہ درست ہے؟"
+    return [("en", en), ("ar", ar), ("ur", ur)]
+
+
+async def test_live_pipeline_extract_three_messages() -> None:
+    from app.pipeline import extract as ex
+
+    s = get_settings()
+    if not (s.llm_provider and s.llm_api_key and s.llm_model_extract):
+        pytest.skip("LLM not configured")
+    for lang, msg in three_messages():
+        res = await ex.extract(msg)
+        print(f"\n{lang}: intent={res.intent} providers={res.usage.providers} "
+              f"claims={[(c.type, c.origin, c.lang, c.ar_queries[:1]) for c in res.claims]}")
+        assert res.intent == "claims" and res.claims, lang
+        for c in res.claims:
+            assert all(ex.is_arabic(q) for q in c.ar_queries)
