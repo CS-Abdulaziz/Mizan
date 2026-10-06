@@ -42,6 +42,8 @@ Exact steps for things only the human can do. Work continues on independent task
 
 ## Resume here
 
+**Secret scan (2026-10-06):** full git history (62 commits, all branches) grepped for Google / Groq / OpenAI / Anthropic / Slack / GitHub / Telegram tokens, Postgres URLs with passwords, JWTs and private keys: **no matches**; no `.env`, `.pem` or `.key` file ever committed. (gitleaks not installed; `gitleaks detect` is the stronger check before going public.)
+
 Updated 2026-10-06 ~06:45 Riyadh. Everything is on `main` (stacked branches squash-merged).
 
 - **Done:** B01-B07, B09-B16, B18, B19 (code), B21-B23, B27. Supabase migrated + ingested (6,236 verses,
