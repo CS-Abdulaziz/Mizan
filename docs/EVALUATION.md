@@ -55,6 +55,7 @@ LLM alone 20.5% (8/39) vs Dorar searched as-is 15.4% (6/39).**
 - Test numbers are for the code at tag `thresholds-frozen`; the later fix D-27 (evidence-request detector) is not
   reflected. Per-category and per-language tables and the chart: `bench/results/report.md`; raw outputs:
   `bench/results/*-test-1.jsonl`.
+- **D-31 re-run:** after the post-freeze fix D-31 (strict spelling tolerance; found by manual testing on the live site), the 42 verse items of the test split were re-run: **no verdict and no number changed**. Pre-fix outputs: `bench/results/pre_d31/`.
 - Hallucination flags: the automatic check (§11.4) flagged 5 Mizan outputs; they are being checked by hand and the
   numbers stay as computed until then.
 

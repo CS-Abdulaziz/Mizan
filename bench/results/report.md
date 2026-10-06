@@ -11,8 +11,8 @@ Thresholds were tuned on the dev split only and frozen before this run (methodol
 | Hallucination rate | 4.8% (5/104) | 8.0% (7/87) | n/a |
 | Abstention / referral correctness | 100.0% (20/20) | 95.0% (19/20) | 0.0% (0/20) |
 | Consistency | n/a (1 run) | n/a (1 run) | n/a (1 run) |
-| Latency p50 (ms) | 9909 | 5466 | 1851 |
-| Latency p95 (ms) | 18487 | 9823 | 2839 |
+| Latency p50 (ms) | 8735 | 5466 | 1851 |
+| Latency p95 (ms) | 18789 | 9823 | 2839 |
 | Mean cost per check (USD) | 0.00000 | 0.00000 | 0.00000 |
 | Items answered | 125 | 125 | 125 |
 
