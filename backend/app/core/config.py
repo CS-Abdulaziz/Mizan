@@ -64,6 +64,7 @@ class Settings(BaseSettings):
     quranenc_key_ur: str = "urdu_junagarhi"
     hadeethenc_base_url: str = "https://hadeethenc.com"
     dorar_base_url: str = "https://dorar.net"
+    dorar_proxy_key: str = ""  # D-32: sent as X-Mizan-Key when DORAR_BASE_URL points at the Worker proxy
     external_timeout_s: float = 8.0
     external_max_concurrency: int = 4
 

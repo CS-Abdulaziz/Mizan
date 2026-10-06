@@ -22,7 +22,10 @@ async def health_dorar() -> JSONResponse:
     url = get_settings().dorar_base_url.rstrip("/") + "/dorar_api.json"
     t0 = time.perf_counter()
     try:
-        async with httpx.AsyncClient(headers={"User-Agent": USER_AGENT}, timeout=12) as c:
+        headers = {"User-Agent": USER_AGENT}
+        if get_settings().dorar_proxy_key:
+            headers["X-Mizan-Key"] = get_settings().dorar_proxy_key
+        async with httpx.AsyncClient(headers=headers, timeout=12) as c:
             r = await c.get(url, params={"skey": "الصلاة"})
         ctype = r.headers.get("content-type", "")
         ok = r.status_code == 200 and "json" in ctype and '"ahadith"' in r.text[:200]

@@ -52,6 +52,10 @@ services:
         value: english_rwwad
       - key: QURANENC_KEY_UR
         value: urdu_junagarhi
+      - key: DORAR_BASE_URL
+        sync: false            # D-32: the Worker proxy URL, or https://dorar.net
+      - key: DORAR_PROXY_KEY
+        sync: false
       - key: ALLOWED_ORIGINS
         sync: false            # e.g. https://<pages-domain>,http://localhost:5173
       - key: PUBLIC_WEB_URL

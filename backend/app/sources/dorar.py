@@ -147,7 +147,10 @@ class DorarClient:
         self.url = s.dorar_base_url.rstrip("/") + "/dorar_api.json"
         self.timeout_s = s.external_timeout_s
         # A descriptive User-Agent is required: Dorar's Cloudflare returns 403 to the default library UA (D-9).
-        self._client = http_client or httpx.AsyncClient(headers={"User-Agent": USER_AGENT}, follow_redirects=True)
+        headers = {"User-Agent": USER_AGENT}
+        if s.dorar_proxy_key:  # D-32: Worker proxy in front of Dorar
+            headers["X-Mizan-Key"] = s.dorar_proxy_key
+        self._client = http_client or httpx.AsyncClient(headers=headers, follow_redirects=True)
         self._cache_get = cache_get
         self._cache_put = cache_put
 
