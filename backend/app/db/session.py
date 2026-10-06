@@ -22,8 +22,16 @@ class DatabaseUnavailable(Exception):
     pass
 
 
+async def register_vector_any(conn: asyncpg.Connection) -> None:
+    """Register the pgvector codec wherever the extension lives (Supabase installs it in `extensions`)."""
+    schema = await conn.fetchval(
+        "select n.nspname from pg_type t join pg_namespace n on n.oid = t.typnamespace where t.typname = 'vector' limit 1"
+    )
+    await register_vector(conn, schema=schema or "public")
+
+
 async def _init_conn(conn: asyncpg.Connection) -> None:
-    await register_vector(conn)
+    await register_vector_any(conn)
     await conn.set_type_codec("jsonb", encoder=json.dumps, decoder=json.loads, schema="pg_catalog")
 
 

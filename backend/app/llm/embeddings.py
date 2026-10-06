@@ -157,7 +157,8 @@ class EmbeddingClient:
         except _Transient as e:
             raise EmbeddingError(f"embedding provider unavailable: {e}") from e
         if r.status_code == 429:
-            raise EmbeddingRateLimited(_retry_after(r.text, r.headers), daily="PerDay" in r.text)
+            quotas = ",".join(sorted(set(re.findall(r'"quotaId"\s*:\s*"([^"]+)"', r.text))))
+            raise EmbeddingRateLimited(_retry_after(r.text, r.headers), daily="PerDay" in r.text, detail=quotas)
         if r.status_code == 402:
             raise EmbeddingError("embedding provider: billing / prepaid credits exhausted (HTTP 402)")
         if r.status_code >= 400:

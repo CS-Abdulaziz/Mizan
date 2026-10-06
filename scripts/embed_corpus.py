@@ -45,9 +45,9 @@ class Embedder(Protocol):
 
 async def embed_table(conn, embedder: Embedder, table: str, batch: int, limit: int | None = None) -> tuple[int, int]:
     """Embed rows of `table` with a null embedding. Returns (rows embedded, tokens used)."""
-    from pgvector.asyncpg import register_vector
+    from app.db.session import register_vector_any
 
-    await register_vector(conn)
+    await register_vector_any(conn)
     keys, text_col = TABLES[table]
     key_sql = ", ".join(keys)
     done = tokens = 0
@@ -80,7 +80,7 @@ async def _embed_with_waits(embedder: Embedder, texts: list[str]):
         except EmbeddingRateLimited as e:
             if e.daily:
                 raise QuotaStop(str(e)) from e
-            print(f"  rate limited by provider: waiting {e.retry_after_s:.0f} s", flush=True)
+            print(f"  rate limited by provider ({e}): waiting {e.retry_after_s:.0f} s", flush=True)
             await asyncio.sleep(e.retry_after_s + 1)
         except EmbeddingError as e:
             if "402" in str(e):
