@@ -34,7 +34,28 @@ every provider were re-run after the quota window and never scored as failures.
 
 ## Results (test split)
 
-_Filled in from `bench/results/report.md` after the frozen runs._
+| Metric | mizan | dorar_direct | llm_baseline |
+|---|---|---|---|
+| Items answered (of 125) | **109 (run in progress)** | 125 | not run on test (quota; dev only) |
+| Verdict accuracy | **99.1%** (108/109) | 49.6% (62/125) | dev: 22.2% (12/54) |
+| Not-established recall | 96.2% (25/26) | 80.8% (21/26) | dev: 0.0% (0/10) |
+| False-verified rate (target 0) | **0.0%** (0/39) | 15.4% (6/39) | dev: 0.0% (0/16) |
+| Hallucination flags (automatic check) | 5/104, all check artifacts (see below) | n/a | dev: 0/23 |
+| Abstention / referral correctness | 100% (4/4) | 0% (0/20) | dev: 66.7% (6/9) |
+| Consistency (3 runs) | not measured: 1 run (D-25) | 1 run | - |
+| Latency p50 / p95 | 10.4 s / 18.8 s | 1.9 s / 2.8 s | dev: 3.0 s / 4.3 s |
+| Mean cost per check | $0 (free tiers) | $0 | $0 |
+
+Reviewed items: 0 of 179 (sharia review pending; all results are on unreviewed items).
+**Incomplete:** Mizan test run 109/125 at the time of writing (the remaining 16 items continue in the background;
+`python bench/metrics.py --split test` regenerates `bench/results/report.md`). `llm_baseline` was run on dev only:
+Gemini Flash daily quotas were exhausted (D-25). Test numbers are for the code at tag `thresholds-frozen`; the later
+fix D-27 (evidence-request detector) is not reflected. Per-category and per-language tables: `bench/results/report.md`.
+
+Hallucination flags: the 5 flagged Mizan outputs are all `fabricated_translated_with_authentic_lookalike` items
+(English quotes) answered correctly `not_established`, with the Arabic text and link copied from Dorar; the
+automatic check has no Arabic source text for Dorar references to compare with, so it flags them. No invented text,
+id, grade or link was found.
 
 ## Limitations per language
 

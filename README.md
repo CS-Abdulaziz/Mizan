@@ -32,7 +32,15 @@ Content policy: [docs/CONTENT_POLICY.md](docs/CONTENT_POLICY.md) · Sources: [do
 
 ## Results (Mizan-Bench)
 
-_Filled in after the frozen-threshold test runs (task B20); see docs/EVALUATION.md._
+Test split (125 items, thresholds frozen on the dev split first; partial run 109/125, 0 items sharia-reviewed yet):
+
+| | Mizan | Dorar search as-is | LLM alone (dev split) |
+|---|---|---|---|
+| Verdict accuracy | **99.1%** | 49.6% | 22.2% |
+| False-verified (fake / altered text labelled authentic) | **0%** | 15.4% | 0% |
+| Not-established recall | 96.2% | 80.8% | 0% |
+
+Free tiers only; latency p50 10 s. Full method, limits and incomplete runs: [docs/EVALUATION.md](docs/EVALUATION.md).
 
 ## Frontend demo
 

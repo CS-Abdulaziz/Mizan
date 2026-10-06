@@ -271,7 +271,7 @@ AC:
   rate, consistency, latency p50/p95, mean cost per check, and reviewed vs unreviewed counts.
 - Manual-agreement field for the 30-sample baseline review is present in the report template.
 
-### [ ] B20 · Threshold tuning on dev, freeze, run test (P0)
+### [x] B20 · Threshold tuning on dev, freeze, run test (P0)
 Depends on: B19
 Build: `bench/tune.py` sweeping the thresholds in `core/thresholds.py` on `dev` only; pick values maximizing
 accuracy subject to false-verified = 0; write them to `thresholds.py`; tag the commit `thresholds-frozen`;
@@ -322,6 +322,20 @@ AC: a teammate can follow README on a clean machine; `gitleaks detect` (or equiv
 Depends on: everything P0
 AC: every item of SPEC §18 checked and ticked in this file; print the final live URL, repo URL, and the 3
 demo inputs with their verdicts for the video.
+
+Checklist (SPEC §18), status 2026-10-06:
+- [ ] Live link works from an external device; the three ready examples (ar, en, ur) give the right result.
+      Locally verified (`python scripts/try_check.py --video`: misquoted + not_established / verified / verified);
+      live link waits on the Render deploy (Waiting on Azoz 3).
+- [x] All verdicts and statuses appear in real examples (`docs/VERDICT_EXAMPLES.md`).
+- [x] No reference or grade in any output absent from the sources (Mizan hallucination rate 0 on dev; texts,
+      gradings and links copied from sources by construction; ids validated in code).
+- [x] False-verified rate on the test split reported (`docs/EVALUATION.md`).
+- [x] Mizan-Bench results and both baselines in `docs/EVALUATION.md`, with reviewed-item counts.
+- [ ] Repo public, run-from-scratch instructions work, sources and licenses documented, no keys (secret scan
+      clean). Making the repo public and a clean-machine run by a teammate are human steps.
+- [ ] `/health` queries the DB (done); pinger configured and cache warmed (Waiting on Azoz 4, 8).
+- [ ] Service stays up through final judging (19-22 Oct), checked daily (human).
 
 ### [x] B27 · File report (P2)
 Depends on: B16
