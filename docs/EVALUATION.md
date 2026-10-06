@@ -1,0 +1,58 @@
+# Mizan-Bench evaluation
+
+## Method
+
+**Items.** 179 items built by `bench/build_items.py` from source data only (no text typed by hand): verses,
+partial quotes, multi-location phrases and rule-based alterations from the King Fahd Complex Mushaf; approved
+QuranEnc translations (en, ur); authentic hadiths and approved translations from HadeethEnc; authentic hadiths that
+also have weak chains on Dorar; fabricated / baseless hadiths from Dorar's gradings; the reference pack's page-6
+test questions; personal-ruling prompts. Every item has a provenance line. Composition follows SPEC §11.2 scaled
+to ~0.5 (DECISIONS D-22). All items are `reviewed_by: null` until the team's sharia reviewer approves them in
+`bench/review_sheet.csv`; the report always states reviewed vs unreviewed counts.
+
+**Splits.** 30 % dev (54 items) / 70 % test (125 items), stratified by category. **Thresholds were tuned on the
+dev split only, then frozen (git tag `thresholds-frozen`) before the test split was run once per system.** The
+dev split also drove the fixes logged as D-23 and D-24; the test split was never inspected before freezing.
+
+**Systems** (SPEC §11.4):
+- `mizan`: the full pipeline (3 runs, for consistency).
+- `llm_baseline`: the same LLM with no retrieval, forced to the same structured output per claim
+  (`verdict`, `source_book`, `grade_text`, `arabic_text`) (3 runs).
+- `dorar_direct`: Dorar search with the message as-is, no extraction or back-translation (1 run).
+
+**Metrics** (`bench/metrics.py`): verdict accuracy per category and language; not-established recall;
+false-verified rate (target 0); hallucination rate (baseline: `arabic_text` below 80 partial-ratio similarity to
+every Mushaf / HadeethEnc / Dorar candidate for the item; Mizan: evidence text not traceable to the item's sources);
+abstention / referral correctness; consistency across runs; latency p50 / p95; mean cost per check
+(`bench/prices.json`: 0 on the free tiers).
+
+**Runtime conditions.** Free tiers only (D-15 - D-21): Gemini Flash models with fallback to Groq
+`openai/gpt-oss-120b` under quota pressure, so both `mizan` and `llm_baseline` were partly served by Groq; the
+provider mix is recorded per check. Embeddings were limited to ~1,000 texts/day (D-19), so vector paths were
+mostly unavailable during the runs; results reflect the lexical + Dorar paths. Items whose LLM calls failed on
+every provider were re-run after the quota window and never scored as failures.
+
+## Results (test split)
+
+_Filled in from `bench/results/report.md` after the frozen runs._
+
+## Limitations per language
+
+- **Arabic.** Verse matching is deterministic over both Uthmani and imla'i spellings; spelling variants outside
+  the known patterns err towards `misquoted`, never `verified` (D-23). Hadith verdicts depend on Dorar's first 15
+  results per query; Sahihayn gradings not among them can turn an authentic hadith into `disputed` (D-11, pending).
+- **English.** Verses: lexical match on the approved Rowwad translation; other translations of the Quran
+  (e.g. Sahih International wording) match less well without embeddings. Hadiths: Dorar via the model's literal
+  Arabic back-translation, plus HadeethEnc's approved translations.
+- **Urdu.** Same as English with the Junagarhi translation; Urdu script is distinguished from Arabic by its
+  extra letters; recall is lower than Arabic.
+- **All.** Sayings attributed to scholars or Companions are out of scope. `prophetic_attribution_no_basis` has a
+  single item (D-22), so that category's numbers are anecdotal.
+
+## Hallucination check: manual agreement
+
+A random sample of 30 `llm_baseline` outputs is to be reviewed by hand against the automatic check; the agreement
+rate is reported here.
+
+- Sample reviewed: _ / 30
+- Agreement: _ %
