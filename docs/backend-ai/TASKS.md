@@ -258,7 +258,7 @@ stratified by category. Also `bench/review_sheet.csv` for the sharia reviewer (i
 AC: ≥ 150 items with the §11.2 proportions; every item has `provenance`; no item text typed by hand.
 HUMAN: sharia reviewer fills `review_sheet.csv`; run `bench/build_items.py --apply-review` to set `reviewed_by`.
 
-### [ ] B19 · Bench runner, baselines, metrics (P0) — AMENDMENT 9
+### [x] B19 · Bench runner, baselines, metrics (P0) — AMENDMENT 9
 Depends on: B16, B18
 Build: `bench/run.py` (systems `mizan`, `llm_baseline`, `dorar_direct`; `--runs`; saves raw outputs to
 `bench/results/<system>-<split>-<run>.jsonl`), `bench/metrics.py` (all metrics in §11.3, hallucination per §11.4,
