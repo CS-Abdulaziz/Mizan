@@ -274,7 +274,7 @@ Depends on: B13, B15
 Build: `pipeline/alternative.py` §8.5.
 AC: alternative only for `not_established`; below 0.75 similarity → none; labelled as a different hadith.
 
-### [ ] B23 · Feedback endpoint (P1)
+### [x] B23 · Feedback endpoint (P1)
 Depends on: B16
 AC: `POST /api/v1/feedback` validates `issue` enum, stores without message text, 404 on unknown `check_id`.
 
