@@ -8,7 +8,10 @@ Exact steps for things only the human can do. Work continues on independent task
    ~1,000 texts/day/model. Every day until judging, from the repo root run:
    `python scripts/embed_corpus.py` (it embeds en/ur hadith first, then en/ur verses, stops cleanly at the daily
    quota and resumes the next day). The pipeline works without embeddings (lexical + Dorar paths).
-2. *(more items are added below as tasks reach a HUMAN step)*
+2. **Sharia reviewer sign-off (D-20, D-11, D-1), pending.** Send them `backend/app/core/grade_rules.py`, the
+   SPEC §8.2 table, and DECISIONS D-1 / D-11 / D-20. Their edits go straight into `grade_rules.py` (keyword lists)
+   or come back to me for the table. The pipeline runs with the current rules meanwhile.
+3. *(more items are added below as tasks reach a HUMAN step)*
 
 ## Resume here
 
@@ -173,7 +176,7 @@ hallucination logging, per-type confidence thresholds (hadith `same_meaning` ≥
 AC: unit tests with mocked LLM: unknown ID dropped and logged; all-unknown → no match; hadith
 `same_meaning` at 0.80 → rejected; verse `same_meaning` at 0.80 → accepted.
 
-### [ ] B15 · Grade classifier + decision engine (P0) — AMENDMENT 1, 5 — `NEEDS SH SIGN-OFF`
+### [x] B15 · Grade classifier + decision engine (P0) — AMENDMENT 1, 5 — `NEEDS SH SIGN-OFF`
 Depends on: B11, B13, B14
 Build: `core/grade_rules.py` (keyword lists), `pipeline/grades.py` (§8.1), `pipeline/decide.py` (§8.2–8.4:
 aggregation table, altered → misquoted, attribution, wrong_type, out_of_scope_attribution, source_unavailable,
