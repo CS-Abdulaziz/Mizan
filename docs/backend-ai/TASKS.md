@@ -32,7 +32,13 @@ Exact steps for things only the human can do. Work continues on independent task
    `curl -s "https://api.telegram.org/bot<TOKEN>/setWebhook" -d "url=https://<service>.onrender.com/telegram/webhook" -d "secret_token=<SECRET>" -d 'allowed_updates=["message","callback_query"]'`
    -> `{"ok":true,...}`. (e) Manual test from a phone: forward a captioned image containing a hadith, check the
    ⏳ message is edited with the verdict, try the three buttons. Tell me the result so I can tick B24.
-7. *(more items are added below as tasks reach a HUMAN step)*
+7. **Frontend switch to the real backend (tell the frontend teammate).** In the Cloudflare Pages build env:
+   `VITE_USE_MOCK_API=false`, `VITE_MIZAN_API_URL=https://<service>.onrender.com`, `VITE_ENABLE_FEEDBACK=true`
+   (the feedback endpoint is live), keep `VITE_API_TIMEOUT_MS=30000`. Their `/r/{check_id}` page works with
+   `GET /api/v1/check/{id}` (24 h). Then add the Pages URL to Render's `ALLOWED_ORIGINS`.
+8. **Before each judging session:** `python scripts/warm_cache.py --api https://<service>.onrender.com` (fills
+   dorar_cache for every demo and bench item; ~30 min at 6/min) and `python scripts/embed_corpus.py` once a day.
+9. *(more items are added below as tasks reach a HUMAN step)*
 
 ## Resume here
 
