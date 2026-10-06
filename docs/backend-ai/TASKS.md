@@ -262,7 +262,7 @@ AC: EVALUATION.md has method, dev/test separation statement, tables, charts, lim
 
 ## Phase E — P1 features
 
-### [ ] B21 · Ready reply + `/api/v1/reply` (P1) — AMENDMENT 10
+### [x] B21 · Ready reply + `/api/v1/reply` (P1) — AMENDMENT 10
 Depends on: B16
 Build: `prompts/reply.txt` §7.6 with glossary, `pipeline/reply.py`, URL validation + one regeneration,
 caching the reply in `check_results.reply`.

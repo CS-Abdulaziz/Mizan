@@ -72,3 +72,26 @@ async def insert_check_metrics(
         check_id, channel, lang, n_claims, status, latency_ms, llm_tokens_in, llm_tokens_out, embed_tokens,
         llm_providers,
     )
+
+
+async def get_reply(check_id: str, lang: str) -> dict[str, Any] | None:
+    pool = await get_pool()
+    reply = await pool.fetchval("select reply from check_results where check_id = $1 and expires_at > now()", check_id)
+    return (reply or {}).get(lang)
+
+
+async def save_reply(check_id: str, lang: str, value: dict[str, Any]) -> None:
+    pool = await get_pool()
+    await pool.execute(
+        "update check_results set reply = coalesce(reply, '{}'::jsonb) || jsonb_build_object($2::text, $3::jsonb) "
+        "where check_id = $1",
+        check_id, lang, value,
+    )
+
+
+async def insert_feedback(check_id: str, claim_index: int, issue: str, note: str | None) -> None:
+    pool = await get_pool()
+    await pool.execute(
+        "insert into feedback (check_id, claim_index, issue, note) values ($1, $2, $3, $4)",
+        check_id, claim_index, issue, note,
+    )
