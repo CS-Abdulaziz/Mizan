@@ -1,6 +1,7 @@
 """Embed every translation and Arabic hadith text that has no embedding yet (SPEC §6, TASKS B08).
 
-    python scripts/embed_corpus.py                 # both tables
+    python scripts/embed_corpus.py                 # en/ur rows: hadith translations first, then verses (D-19)
+    python scripts/embed_corpus.py --langs ar,en,ur # include Arabic hadith rows too
     python scripts/embed_corpus.py --table hadith_translations --limit 500
 
 Batches of EMBEDDING_BATCH_SIZE (100); each batch is committed as soon as it is embedded and rows that
@@ -43,7 +44,9 @@ class Embedder(Protocol):
     async def embed_with_usage(self, texts: list[str], input_type: str = "document"): ...  # noqa: E704
 
 
-async def embed_table(conn, embedder: Embedder, table: str, batch: int, limit: int | None = None) -> tuple[int, int]:
+async def embed_table(
+    conn, embedder: Embedder, table: str, batch: int, limit: int | None = None, langs: tuple[str, ...] | None = None
+) -> tuple[int, int]:
     """Embed rows of `table` with a null embedding. Returns (rows embedded, tokens used)."""
     from app.db.session import register_vector_any
 
@@ -54,8 +57,11 @@ async def embed_table(conn, embedder: Embedder, table: str, batch: int, limit: i
     t0 = time.perf_counter()
     while limit is None or done < limit:
         n = batch if limit is None else min(batch, limit - done)
+        lang_sql = " and lang = any($2::text[])" if langs else ""
+        args = (n, list(langs)) if langs else (n,)
         rows = await conn.fetch(
-            f"select {key_sql}, {text_col} from {table} where embedding is null order by {key_sql} limit $1", n
+            f"select {key_sql}, {text_col} from {table} where embedding is null{lang_sql} order by {key_sql} limit $1",
+            *args,
         )
         if not rows:
             break
@@ -101,9 +107,10 @@ async def main_async(args: argparse.Namespace) -> int:
     conn = await asyncpg.connect(s.database_url)
     try:
         embedder = EmbeddingClient(s)
-        for table in [args.table] if args.table else list(TABLES):
+        langs = tuple(x.strip() for x in args.langs.split(",") if x.strip())
+        for table in [args.table] if args.table else ["hadith_translations", "quran_translations"]:
             try:
-                n, tok = await embed_table(conn, embedder, table, s.embedding_batch_size, args.limit)
+                n, tok = await embed_table(conn, embedder, table, s.embedding_batch_size, args.limit, langs)
             except QuotaStop as e:
                 remaining = await conn.fetchval(f"select count(*) from {table} where embedding is null")
                 print(f"STOPPED ({e}). {table}: {remaining} rows still without embedding. "
@@ -120,6 +127,7 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--table", choices=list(TABLES))
     ap.add_argument("--limit", type=int, default=None)
+    ap.add_argument("--langs", default="en,ur", help="comma-separated languages to embed (D-19)")
     return asyncio.run(main_async(ap.parse_args()))
 
 

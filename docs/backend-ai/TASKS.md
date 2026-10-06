@@ -1,29 +1,18 @@
 # Backend + AI tasks
 
-## Resume here (2026-10-05, end of day)
+## Waiting on Azoz
 
-**Branch:** `be/free-tier-providers` holds everything (stacked on `be/B01-skeleton` … `be/B09-dorar-client`,
-all pushed; nothing merged to `main`). Tests: `pytest -q` → 74 passed / 9 skipped; with `--live` against a
-local Postgres → 82 passed.
+Exact steps for things only the human can do. Work continues on independent tasks meanwhile.
 
-**Done:** B01, B02, B03, B05, B06, B07, B09 ticked. B04 and B08 code done, not ticked (need Supabase / a working
-embedding key). Free-tier switch (DECISIONS D-15–D-17): Gemini via its OpenAI-compatible endpoint + Groq quota fallback,
-provider per call in `check_metrics`, Gemini embeddings (1024 dims, L2-normalized, rate-limited, resumable),
-resumable/rate-limited `bench/run.py`, free-tier privacy notice. Extraction prompt + schema (§7.2) already in place.
+1. **Embeddings quota (D-19), optional but improves English/Urdu recall.** Gemini's free embedding tier allows
+   ~1,000 texts/day/model. Every day until judging, from the repo root run:
+   `python scripts/embed_corpus.py` (it embeds en/ur hadith first, then en/ur verses, stops cleanly at the daily
+   quota and resumes the next day). The pipeline works without embeddings (lexical + Dorar paths).
+2. *(more items are added below as tasks reach a HUMAN step)*
 
-**Next:** B10 (extraction pipeline + rule detector, on top of `llm/prompts/extract.txt` and
-`models/extraction.py`), then B11 (verse matcher; must tolerate spelling variants, see D-13).
+## Resume here
 
-**Needed from the human:**
-1. A Gemini key from an AI Studio project **without billing** (the current key returns HTTP 402 "prepayment
-   credits depleted" for every model and for embeddings). Put it in `LLM_API_KEY` and `EMBEDDING_API_KEY`, then run
-   `python scripts/pick_llm_model.py --write` and `pytest --live tests/test_extract_live.py` (from `backend/`).
-2. Optional: `GROQ_API_KEY` for the quota fallback.
-3. `DATABASE_URL`: switch port 6543 (transaction pooler) to 5432 (session pooler, D-7). Then:
-   `python scripts/migrate.py`, `ingest_quran.py`, `ingest_quranenc.py`, `ingest_hadeethenc.py`, `embed_corpus.py`.
-4. Decisions: D-10 (Mushaf license: OK to keep `data/quran.json` out of git?), D-11 (extra Sahihayn-filtered
-   Dorar query; needs SH sign-off), and how to merge the stacked branches (PRs or straight to `main`).
-5. Tell the frontend teammate: the About page should show `privacy` from `/api/v1/sources` (free-tier notice).
+Updated as tasks complete. Work is on `main` (stacked branches were squash-merged on 2026-10-06).
 
 ---
 
