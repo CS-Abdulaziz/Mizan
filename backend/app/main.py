@@ -14,7 +14,7 @@ from app.api import health
 from app.core.config import get_settings
 from app.core.logging import get_logger, setup_logging
 from app.db import queries, session
-from app.pipeline import quran_match
+from app.pipeline import hadith_retrieve, quran_match
 
 log = get_logger(__name__)
 
@@ -39,6 +39,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     log.info("startup")
     await quran_match.load_index()
     await quran_match.load_translations()
+    await hadith_retrieve.load_hadeeth_index()
     cleanup = asyncio.create_task(cleanup_expired_results_forever())
     try:
         yield
@@ -46,6 +47,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         cleanup.cancel()
         with contextlib.suppress(asyncio.CancelledError):
             await cleanup
+        await hadith_retrieve.close_dorar()
         await session.close_pool()
         log.info("shutdown")
 

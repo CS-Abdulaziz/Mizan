@@ -158,7 +158,7 @@ Build: vector search via `match_verse` + literal Arabic queries through B11, mer
 AC: given an approved English and Urdu translation of 3 verses (taken from `quran_translations`), the correct
 verse is in the top 6 candidates for all 6.
 
-### [ ] B13 · Hadith retriever (P0)
+### [x] B13 · Hadith retriever (P0)
 Depends on: B08, B09
 Build: `pipeline/hadith_retrieve.py` §7.4: paths A/B/C in parallel, early stop, grouping of Dorar results by
 matn (token_set_ratio ≥ 92), top 6 to verifier, `source_status` propagation.
