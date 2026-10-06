@@ -10,8 +10,8 @@ every commit is pushed to both `origin` and `fork`).
 | Live link works from an external device; ar / en / ur examples right | **PASS** | Live smoke: /health 200 (db true); ar altered verse `misquoted` + fabricated hadith `not_established`; en hadith `verified`; ur 112:1 `verified`; no_claims and evidence_request statuses correct; no `source_unavailable` (Dorar reachable from Render). Latency 4.6-29.7 s on the free tier. One transient 502 during a redeploy. |
 | All verdicts and statuses appear in real examples | **PASS** | `docs/VERDICT_EXAMPLES.md` (`python scripts/verdict_examples.py`) |
 | No reference or grade absent from the sources | **PENDING (Azoz)** | By construction texts / grades / links are copied from sources and ids validated in code; the automatic check flagged 5/104 Mizan outputs: confirm them by hand (list printed in the session) |
-| False-verified rate on the test split reported | **PASS** | Mizan 0.0% (0/39) vs LLM alone 30.4% vs Dorar as-is 15.4% |
-| Bench results + both baselines in EVALUATION.md, reviewed counts | **PARTIAL** | Full mizan + dorar_direct; llm_baseline 89/125 (quota); 1 run (no consistency); 0/179 reviewed (Azoz: sharia review) |
+| False-verified rate on the test split reported | **PASS** | Mizan 0.0% (0/39) vs LLM alone 20.5% vs Dorar as-is 15.4% |
+| Bench results + both baselines in EVALUATION.md, reviewed counts | **PARTIAL** | All three systems 125/125 on test; 1 run (no consistency); 0/179 reviewed (Azoz: sharia review) |
 | Repo public, run-from-scratch works, sources + licenses, no keys | **PARTIAL** | Docs done; secret scan of full history clean (grep; Azoz: run gitleaks, make the repo public, clean-machine test) |
 | `/health` queries the DB; pinger; cache warmed | **PARTIAL** | /health PASS; Azoz: UptimeRobot on /health every 10 min; warm cache before judging |
 | Service up through 19-22 Oct, checked daily | **PENDING (Azoz)** | daily check |

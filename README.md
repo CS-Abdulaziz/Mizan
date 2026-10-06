@@ -43,9 +43,9 @@ Test split (125 items; thresholds frozen on the dev split first; all items still
 
 | | Mizan | LLM alone | Dorar search as-is |
 |---|---|---|---|
-| **False-verified** (fake / altered text labelled authentic) | **0%** | 30.4% | 15.4% |
-| Verdict accuracy | **99.2%** | 78.7% (answered 89/125, quota) | 49.6% |
-| Not-established recall | 96.2% | 50.0% | 80.8% |
+| **False-verified** (fake / altered text labelled authentic) | **0%** | 20.5% | 15.4% |
+| Verdict accuracy | **99.2%** | 73.6% | 49.6% |
+| Not-established recall | 96.2% | 30.8% | 80.8% |
 
 One run per system (consistency not measured); free tiers only; Mizan latency p50 9.9 s. Method, gaps and limits:
 [docs/EVALUATION.md](docs/EVALUATION.md).
